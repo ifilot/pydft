@@ -6,8 +6,9 @@
 [![PyPI](https://img.shields.io/pypi/v/pydft?color=green)](https://pypi.org/project/pytessel/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
-Python based Density Functional Theory code for educational purposes. The
-documentation of PyDFT can be found [here](https://ifilot.pages.tue.nl/pydft/).
+> [!NOTE]  
+> Python based Density Functional Theory code for educational purposes. The
+> documentation of PyDFT can be found [here](https://pydft.imc-tue.nl/).
 
 ## Purpose
 
@@ -17,8 +18,33 @@ exchange-correlation functionals. The purpose of PyDFT is mainly to serve as an
 educational tool to explain the inner workings of a DFT calculation. This
 program is not intended for professional calculations. It is not particularly
 fast nor offers a lot of features that more mature open-source of commercial
-packages offer. It does offer a unique insight into a working code and a
+packages offer. It **does** offer a unique insight into a working code and a
 considerable effort was made in documenting everything.
+
+## Features
+
+### Numerical integration using Becke grids
+
+Electron-electron interaction terms (both classical as well as
+exchange-correlation) are performed by means of extensive numerical integration
+schemes performed over so-called Becke grids. Utilizing these grids, molecular
+integrals are decomposed into series of weighted atomic integrals.
+
+![Becke grids](img/becke-grid.png)
+
+### Molecular orbital visualization
+
+PyDFT can be readily used alongside [matplotlib](https://matplotlib.org/stable/)
+to make figures of molecular orbitals or density fields.
+
+![Molecular orbitals of CO](img/mo_co.png)
+
+### Extensive output
+
+Internal matrices, e.g. overlap or Hamiltonian matrix, are exposed to the user
+and can be readily visualized using specific matrix visualization routines.
+
+![Matrices](img/matrices.png)
 
 ## Installation
 
