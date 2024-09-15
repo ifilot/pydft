@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools", "setuptools-scm"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pydft"
+version = "0.6.1"
+authors = [
+  { name="Ivo Filot", email="i.a.w.filot@tue.nl" }
+]
+maintainers = [
+    { name="Ivo Filot", email="i.a.w.filot@tue.nl" },
+]
+description = "pydft"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {text = "GPL-3.0-or-later"}
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "scipy",
+    "numpy",
+    "pyqint",
+    "pylebedev",
+    "mendeleev",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["pydft*"]
+
+[tool.conda.environment]
+name = "demo"
+channels = [
+    "ifilot",
+    "conda-forge",
+]
+
+[project.urls]
+"Homepage" = "https://gitlab.tue.nl/ifilot/pydft"
+"Bug Tracker" = "https://gitlab.tue.nl/ifilot/pydft/-/issues"
