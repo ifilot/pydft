@@ -29,7 +29,7 @@ class TestDFT(unittest.TestCase):
         dft = DFT(mol, basis='sto3g')
         energy = dft.scf()
 
-        answer = -74.9393412503195
+        answer = -74.93750649033662
         np.testing.assert_almost_equal(energy, answer, 4)
 
     def test_co(self):
@@ -43,7 +43,7 @@ class TestDFT(unittest.TestCase):
         dft = DFT(mol, basis='sto3g')
         energy = dft.scf()
 
-        answer = -111.1458218142885
+        answer = -111.14683799873168
         np.testing.assert_almost_equal(energy, answer, 4)
         
     def test_bf3(self):
@@ -57,7 +57,7 @@ class TestDFT(unittest.TestCase):
         dft = DFT(mol, basis='sto3g')
         energy = dft.scf()
 
-        answer = -318.2583234959651
+        answer = -318.2753601057624
         np.testing.assert_almost_equal(energy, answer, 4)
     
     def test_ch4(self):
@@ -71,7 +71,7 @@ class TestDFT(unittest.TestCase):
         dft = DFT(mol, basis='sto3g')
         energy = dft.scf()
 
-        answer = -39.801509613192096
+        answer = -39.80546943950668
         np.testing.assert_almost_equal(energy, answer, 4)
     
     def test_co2(self):
@@ -85,7 +85,7 @@ class TestDFT(unittest.TestCase):
         dft = DFT(mol, basis='sto3g')
         energy = dft.scf()
 
-        answer = -185.0106604454506
+        answer = -185.01476596292474
         np.testing.assert_almost_equal(energy, answer, 4)
     
     def test_ethylene(self):
@@ -99,7 +99,7 @@ class TestDFT(unittest.TestCase):
         dft = DFT(mol, basis='sto3g')
         energy = dft.scf()
 
-        answer = -77.16054913818746
+        answer = -77.16253628136911
         np.testing.assert_almost_equal(energy, answer, 4)
         
     def test_h2(self):
@@ -127,7 +127,7 @@ class TestDFT(unittest.TestCase):
         dft = DFT(mol, basis='sto3g')
         energy = dft.scf()
 
-        answer = -7.86536764070593
+        answer = -7.865828015750928
         np.testing.assert_almost_equal(energy, answer, 4)
            
     # def test_benzene(self):

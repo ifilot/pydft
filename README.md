@@ -22,7 +22,8 @@ packages offer. It **does** offer a unique insight into a working code and a
 considerable effort was made in documenting everything.
 
 > [!TIP]  
-> Interested in other **education** quantum chemical codes? Have a look at the packages below.
+> Interested in other **education** quantum chemical codes? Have a look at the
+> packages below.
 > * [PyQInt](https://github.com/ifilot/pyqint) is a hybrid C++/Python (Cython)
 >   code for performing Hartree-Fock calculations. This code contains many
 >   relevant features, such a geometry optimization, orbital localization and
@@ -91,10 +92,10 @@ print("Total electronic energy: %f Ht" % en)
 * Contributions to PyDFT are always welcome and appreciated. Before doing so,
   please first read the [CONTRIBUTING](CONTRIBUTING.md) guide.
 * For reporting issues or problems with the software, you are kindly invited to
-  to open a [new issue with the bug label](https://github.com/ifilot/pydft/issues/new?labels=bug).
-* If you seek support in using PyDFT, please 
-  [open an issue with the question](https://github.com/ifilot/pydft/issues/new?labels=question)
-  label.
+  to open a [new issue with the bug
+  label](https://github.com/ifilot/pydft/issues/new?labels=bug).
+* If you seek support in using PyDFT, please [open an issue with the
+  question](https://github.com/ifilot/pydft/issues/new?labels=question) label.
 * If you wish to contact the developers, please send an e-mail to ivo@ivofilot.nl.
 
 ## License

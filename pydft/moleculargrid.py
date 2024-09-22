@@ -62,7 +62,7 @@ class MolecularGrid:
         self.__build_amplitudes()
         self.__is_initialized = True
 
-    def build_density(self, P:np.ndarray, normalize:bool=False):
+    def build_density(self, P:np.ndarray, normalize:bool=True):
         """
         Build the electron density from the density matrix
 
@@ -72,7 +72,7 @@ class MolecularGrid:
             density matrix
         normalize : bool, optional
             whether to normalize the density matrix based on the total number
-            of electrons, by default False
+            of electrons, by default True
         """
         # this function requires the amplitudes and molecular grid
         # to be built
@@ -94,7 +94,7 @@ class MolecularGrid:
         # perform optional normalization
         if normalize:
             nelec = np.sum(self.__mgw * self.__densities.flatten())
-            cn = nelec / self.__nelec # normalization constant
+            cn = self.__nelec / nelec  # normalization constant
             self.__densities *= cn
             self.__gradients *= cn
         
