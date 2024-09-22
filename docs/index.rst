@@ -5,8 +5,10 @@ PyDFT: pure-python density functional theory
    :target: https://anaconda.org/ifilot/pydft
 .. image:: https://img.shields.io/pypi/v/pydft?color=green
    :target: https://pypi.org/project/pydft/
-.. image:: https://gitlab.tue.nl/ifilot/pydft/badges/master/pipeline.svg
-   :target: https://gitlab.tue.nl/ifilot/pydft/-/commits/master
+.. image:: https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml/badge.svg
+   :target: https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml
+.. image:: https://github.com/ifilot/pydft/actions/workflows/build_conda.yml/badge.svg
+   :target: https://github.com/ifilot/pydft/actions/workflows/build_conda.yml
 .. image:: https://img.shields.io/badge/License-GPLv3-blue.svg
    :target: https://www.gnu.org/licenses/gpl-3.0
 
@@ -27,13 +29,14 @@ a working code and a considerable effort was made in documenting everything.
 
    More information on the inner workings of :program:`PyDFT` can be obtained
    from the textbook "Elements of Electronic Structure Theory" (specifically
-   chapter 4), which is freely available `via this website <https://ifilot.pages.tue.nl/elements-of-electronic-structure-theory/>`_.
+   chapter 4), which is freely available `via this website
+   <https://ifilot.pages.tue.nl/elements-of-electronic-structure-theory/>`_.
 
 :program:`PyDFT` has been developed at the Eindhoven University of Technology,
-Netherlands. :program:`PyDFT` and its development are hosted on `github
-<https://gitlab.tue.nl/ifilot/pydft>`_.  Bugs and feature
-requests are ideally submitted via the `github issue tracker
-<https://gitlab.tue.nl/ifilot/pydft/issues>`_.
+Netherlands. :program:`PyDFT` and its development are hosted on `Github
+<https://www.github.com/ifilot/pydft>`_.  Bugs and feature requests are ideally
+submitted via the `github issue tracker
+<https://www.github.com/ifilot/pydft/issues>`_.
 
 .. toctree::
    :maxdepth: 2
