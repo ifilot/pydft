@@ -21,6 +21,12 @@ fast nor offers a lot of features that more mature open-source of commercial
 packages offer. It **does** offer a unique insight into a working code and a
 considerable effort was made in documenting everything.
 
+> [!TIP]  
+> Interested in other education quantum chemical codes? Have a look at the packages below.
+> * [PyQInt](https://github.com/ifilot/pyqint) is a hybrid C++/Python code for performing Hartree-Fock calculations.
+> * [HFCXX](https://github.com/ifilot/hfcxx) is a full C++ code for performing Hartree-Fock calculations.
+> * [DFTCXX](https://github.com/ifilot/hfcxx) is a full C++ code for performing Density Functional Theory Calculations.
+
 ## Features
 
 ### Numerical integration using Becke grids
