@@ -35,7 +35,7 @@ test:
     - tests/*.py
 
 about:
-  home: https://gitlab.tue.nl/ifilot/pydft
+  home: https://github.com/ifilot/pydft
   license: GPL3
   license_family: GPL
   summary: Python package for performing simple DFT calculations

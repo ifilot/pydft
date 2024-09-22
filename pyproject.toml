@@ -42,5 +42,5 @@ channels = [
 ]
 
 [project.urls]
-"Homepage" = "https://gitlab.tue.nl/ifilot/pydft"
-"Bug Tracker" = "https://gitlab.tue.nl/ifilot/pydft/-/issues"
+"Homepage" = "https://github.com/ifilot/pydft"
+"Bug Tracker" = "https://github.com/ifilot/pydft/issues"

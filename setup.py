@@ -37,7 +37,7 @@ setup(
     description="Python package for performing simple DFT calculations",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://gitlab.tue.nl/ifilot/pydft",
+    url="https://github.com/ifilot/pydft",
     packages=[PKG],
     include_package_data=True,
     classifiers=[
