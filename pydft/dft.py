@@ -19,6 +19,7 @@ class DFT():
                  nshells:int = 32,
                  nangpts:int = 110,
                  lmax:int = 8,
+                 normalize:bool = True,
                  verbose:bool = False):
         """
         Constructs the DFT class
@@ -38,6 +39,8 @@ class DFT():
             number of angular sampling points, by default 110
         lmax : int, optional
             maximum value of l in the spherical harmonic expansion, by default 8
+        normalize: whether to perform intermediary normalization of the electron 
+            density
         verbose : bool, optional
             whether to provide verbose output, by default False
         """
@@ -51,6 +54,7 @@ class DFT():
         self.__nangpts = nangpts
         self.__lmax = lmax
         self.__functional = functional
+        self.__normalize = normalize
 
     def get_data(self) -> dict:
         """
@@ -237,7 +241,7 @@ class DFT():
         # calculate J and XC matrices based on the current electron
         # density estimate as captured in the density matrix P
         if np.any(self.__P):
-            self.__molgrid.build_density(self.__P, normalize=True)
+            self.__molgrid.build_density(self.__P, normalize=self.__normalize)
             self.__J = self.__calculate_J()
             self.__XC, self.__Exc = self.__calculate_XC()
 
