@@ -14,7 +14,7 @@ jobs:
     - name: Install packages
       run: sudo apt update && sudo apt install -y git build-essential curl wget python3 python3-pip texlive texlive-pictures texlive-latex-extra pdf2svg poppler-utils netpbm imagemagick ghostscript
     - name: Install Python packages
-      run: sudo pip install sphinx sphinx-rtd-theme sphinxcontrib-tikz numpy scipy
+      run: sudo pip install sphinx sphinx-rtd-theme sphinxcontrib-tikz numpy scipy pylebedev pyqint mendeleev
     - name: Build documentation
       run: cd docs && make html
     - name: Upload math result for job 1
