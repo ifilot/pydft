@@ -552,13 +552,13 @@ class MolecularGrid:
         Parameters
         ----------
         pts : np.ndarray
-            Array of grid points :math:`(N \\times 3)` with :math:`N` the number
+            Array of grid points :math:`(N \times 3)` with :math:`N` the number
             of grid points
 
         Returns
         -------
         np.array
-            Coulomb potential at grid points :math:`(\left[l_{\\textrm{max}}+1\\right]^{2} \\times N)` 
+            Coulomb potential at grid points :math:`(\left[l_{\textrm{max}}+1\right]^{2} \times N)` 
             with :math:`N` the number of grid points
         """
         # for each grid point, 
@@ -576,22 +576,22 @@ class MolecularGrid:
     def get_exchange_potential_at_points(self, 
                                          pts:np.ndarray, 
                                          P:np.ndarray) -> np.ndarray:
-        """
+        r"""
         Get the exchange potential at points pts
 
         Parameters
         ----------
         pts : np.ndarray
-            Array of grid points :math:`(N \\times 3)` with :math:`N` the number
+            Array of grid points :math:`(N \times 3)` with :math:`N` the number
             of grid points
         P : np.ndarray
-            Density matrix  :math:`(K \\times K)` with :math:`K` the number of
+            Density matrix  :math:`(K \times K)` with :math:`K` the number of
             basis functions
 
         Returns
         -------
         np.ndarray
-            Exchange potential :math:`\\nu_{x}` at grid points :math:`(N \\times 1)` 
+            Exchange potential :math:`\nu_{x}` at grid points :math:`(N \times 1)` 
             with :math:`N` the number of grid points
         """
         dens = self.get_density_at_points(pts, P)
@@ -636,7 +636,7 @@ class MolecularGrid:
     def get_spherical_harmonic_expansion_of_amplitude(self, 
                                                       c:np.ndarray, 
                                                       radial_factor=False) -> list[np.ndarray]:
-        """
+        r"""
         Get the spherical harmonic expansion representation of a wavefunction
         amplitude using solution vector c
 
@@ -651,7 +651,7 @@ class MolecularGrid:
         -------
         list[np.ndarray]
             List of spherical harmonic expansions per atom stored as
-            :math:`(N_{r} \\times N_{lm})) arrays where :math:`N_{r}` is the
+            :math:`(N_{r} \times N_{lm})` arrays where :math:`N_{r}` is the
             number of radial points and :math:`N_{lm}` the set of spherical
             harmonics used in the expansion.
         """
