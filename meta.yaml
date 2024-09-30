@@ -29,10 +29,9 @@ requirements:
 test:
   requires:
     - numpy
-    - nose
     - scipy
-    - conda
-    - packaging
+    - setuptools
+    - pytest
     - conda-forge::mendeleev
     - ifilot::pyqint
     - ifilot::pylebedev
