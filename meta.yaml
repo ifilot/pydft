@@ -22,17 +22,23 @@ requirements:
     - python>=3.9
     - scipy
     - numpy
+    - conda-forge::mendeleev
+    - ifilot::pyqint
+    - ifilot::pylebedev
 
 test:
   requires:
     - numpy
-    - nose
     - scipy
-    - conda
-    - packaging
-    - python>=3.9
+    - setuptools
+    - pytest
+    - conda-forge::mendeleev
+    - ifilot::pyqint
+    - ifilot::pylebedev
   source_files:
     - tests/*.py
+  commands:
+    - pytest
 
 about:
   home: https://github.com/ifilot/pydft

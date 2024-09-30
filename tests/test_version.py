@@ -1,4 +1,11 @@
 import unittest
+import sys
+import os
+import numpy as np
+
+# add a reference to load the pyDFT module
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 import pydft
 
 class TestVersion(unittest.TestCase):
