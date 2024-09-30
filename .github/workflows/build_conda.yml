@@ -41,7 +41,7 @@ jobs:
           rm pyproject.toml
           conda install conda-build
           conda install -c ifilot pyqint pylebedev
-          conda install -c conda-forge tqdm
+          conda install -c conda-forge tqdm mendeleev
           conda build . --output-folder conda-bld/
       - name: Archive packages
         uses: actions/upload-artifact@v3
