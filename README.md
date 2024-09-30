@@ -3,7 +3,7 @@
 [![build](https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml/badge.svg)](https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml)
 [![build](https://github.com/ifilot/pydft/actions/workflows/build_conda.yml/badge.svg)](https://github.com/ifilot/pydft/actions/workflows/build_conda.yml)
 [![Anaconda-Server Badge](https://anaconda.org/ifilot/pydft/badges/version.svg)](https://anaconda.org/ifilot/pydft)
-[![PyPI](https://img.shields.io/pypi/v/pydft?color=green)](https://pypi.org/project/pytessel/)
+[![PyPI](https://img.shields.io/pypi/v/pydft?color=green)](https://pypi.org/project/pydft/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
 > [!NOTE]  
