@@ -1,5 +1,11 @@
 import unittest
+import sys
+import os
 import numpy as np
+
+# add a reference to load the pyDFT module
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+
 from pydft import MoleculeBuilder, DFT
 
 class TestDFT(unittest.TestCase):

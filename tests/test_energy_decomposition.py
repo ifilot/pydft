@@ -1,10 +1,9 @@
-# -*- coding: utf-8 -*-
-
-import numpy as np
 import unittest
-import sys, os
+import sys
+import os
+import numpy as np
 
-# add a reference to load the PyPWDFT module
+# add a reference to load the pyDFT module
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from pydft import DFT, MoleculeBuilder

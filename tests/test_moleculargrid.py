@@ -1,8 +1,12 @@
-# -*- coding: utf-8 -*-
+import unittest
+import sys
+import os
+import numpy as np
+
+# add a reference to load the pyDFT module
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from pydft import MoleculeBuilder, MolecularGrid
-import numpy as np
-import unittest
 
 class TestMolecularGrid(unittest.TestCase):
     """
