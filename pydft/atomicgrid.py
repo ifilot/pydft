@@ -5,6 +5,7 @@ from scipy.interpolate import CubicSpline
 from . import bragg_slater
 from .angulargrid import AngularGrid
 from .spherical_harmonics import spherical_harmonic
+import math
 
 class AtomicGrid:
     def __init__(self, at, nshells:int=32, nangpts:int=110, lmax:int=8):
@@ -434,17 +435,24 @@ class AtomicGrid:
                 A[i,i] = 1.0
                 continue
             
-            c1 /= 180.0 * h * h 
-            c2 /= 60.0 * h
-            A[i,i-3] = 2.0 * c1 - 1.0 * c2
-            A[i,i-2] = -27.0 * c1 + 9.0 * c2
-            A[i,i-1] = 270.0 * c1 - 45.0 * c2
-            A[i,i]   = -490.0 * c1
-            A[i,i+1] = 270.0 * c1 + 45.0 * c2
-            A[i,i+2] = -27.0 * c1 - 9.0 * c2
-            A[i,i+3] = 2.0 * c1 + 1.0 * c2
+            c1 *= self.__calculate_fd_coeff(np.arange(-3,4), 2)
+            c2 *= self.__calculate_fd_coeff(np.arange(-3,4), 1)
+            A[i,(i-3):(i+4)] = c1 / h**2 + c2 / h
             
         return A
+
+    def __calculate_fd_coeff(self, x, k):
+        """
+        Calculate finite difference coefficients
+        
+        x: sampling points
+        k: derivative order
+        """
+        T = np.vander(x, increasing=True).transpose()
+        b = np.zeros(len(x))
+        b[k] = math.factorial(k)
+
+        return np.linalg.solve(T,b)
 
     def __set_bragg_slater_radius(self):
         """

@@ -19,8 +19,7 @@ class DFT():
                  nshells:int = 32,
                  nangpts:int = 110,
                  lmax:int = 8,
-                 normalize:bool = True,
-                 verbose:bool = False):
+                 normalize:bool = True):
         """
         Constructs the DFT class
 
@@ -47,7 +46,6 @@ class DFT():
         self.__mol = mol
         self.__integrator = PyQInt()
         self.__basis = basis
-        self.__verbose = verbose
         self.__time_stats = {}
         self.__itermax = 100
         self.__nshells = nshells
@@ -155,7 +153,7 @@ class DFT():
 
         return self.__molgrid.get_gradient_at_points(spoints, self.__P)
     
-    def scf(self, tol:float=1e-5) -> float:
+    def scf(self, tol:float=1e-5, verbose:bool=False) -> float:
         """
         Perform the self-consistent field procedure
 
@@ -187,7 +185,7 @@ class DFT():
             itertime = stop - start
             self.__time_stats['iterations'].append(itertime)
             
-            if self.__verbose:
+            if verbose:
                 print('%03i | Energy: %12.6f | %0.4f ms' % (niter+1, energy, itertime))
             
             if niter > 2:
@@ -200,7 +198,7 @@ class DFT():
                         continue
                     
                     # terminate self-convergence cycle
-                    if self.__verbose:
+                    if verbose:
                         print("Stopping SCF cycle, convergence reached.")
                         
                         # update density matrix from last found coefficient matrix
