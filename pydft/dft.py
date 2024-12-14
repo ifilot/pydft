@@ -57,6 +57,13 @@ class DFT():
         self.__lmax = lmax
         self.__functional = functional
         self.__normalize = normalize
+        
+        # keep track of time
+        self.calctimes = {
+            'density_hartree': [],
+            'calculate_J': [],
+            'calculate_XC': [],
+        }
 
     def get_data(self) -> dict:
         """
@@ -87,6 +94,7 @@ class DFT():
         * :code:`orbc`: coeffient matrix (duplicate)
         * :code:`orbe`: molecular orbital eigenvalues
         * :code:`enucrep`: electrostatic repulsion of the nuclei
+        * :code:`timedata`: computation time for various parts of the calculation
         
         """
         data = {
@@ -106,6 +114,10 @@ class DFT():
             'orbc': self.__C,       # coeffient matrix (duplicate)
             'orbe': self.__e,       # molecular orbital eigenvalues
             'enucrep': self.__enuc, # electrostatic repulsion of the nuclei
+            
+            # also output computation times
+            'timedata': {'construct_times': self.__molgrid.construct_times,
+                         'calc_times': self.calctimes},
         }
         
         return data
@@ -179,6 +191,7 @@ class DFT():
 
         # start SCF iterative procedure
         nitfin = 0
+        ediff = 0
         for niter in range(0, self.__itermax):
             start = time.time()
             energy = self.__iterate(niter, 
@@ -190,15 +203,15 @@ class DFT():
             self.__time_stats['iterations'].append(itertime)
             
             if verbose:
-                print('%03i | Energy: %12.6f | %0.4f ms' % (niter+1, energy, itertime))
+                print('%03i | E = %12.6f | dE = %5.4e | %0.4f ms' % (niter+1, energy, ediff, itertime))
             
-            if niter > 2:
+            if niter > 0:
                 ediff = np.abs(energy - self.__energies[-2])
+            if niter > 2:
                 if ediff < tol:
                     # terminate giis self-convergence and continue with mixing
                     nitfin += 1
-                    
-                    if nitfin < 3:
+                    if nitfin < 2:
                         continue
                     
                     # terminate self-convergence cycle
@@ -210,6 +223,19 @@ class DFT():
                     break
 
         return energy
+    
+    def print_time_statistics(self):
+        print('-- Construction times --')
+        print('Atomic grids:                                %.4f s' % self.__molgrid.construct_times['atomic_grids'])
+        print('Fuzzy cell decomposition:                    %.4f s' % self.__molgrid.construct_times['fuzzy_cell_decomposition'])
+        print('Spherical harmonics:                         %.4f s' % self.__molgrid.construct_times['spherical_harmonics'])
+        print('Nuclear distance and potential:              %.4f s' % self.__molgrid.construct_times['nuclear_distance_and_potential'])
+        print('Basis set amplitudes:                        %.4f s' % self.__molgrid.construct_times['basis_function_amplitudes'])
+        print()
+        print('-- Calculation times --')
+        print('Classical e-e repulsion matrix (J):          %.4f s' % np.average(self.calctimes['calculate_J']))
+        print('Electron density and Hartree potential (U):  %.4f s' % np.average(self.calctimes['density_hartree']))
+        print('Exchange-correlation matrices (XC):          %.4f s' % np.average(self.calctimes['calculate_XC']))
     
     def get_construction_times(self) -> dict:
         """
@@ -243,9 +269,18 @@ class DFT():
         # calculate J and XC matrices based on the current electron
         # density estimate as captured in the density matrix P
         if np.any(self.__P):
+            st = time.time()
             self.__molgrid.build_density(self.__P, normalize=self.__normalize)
+            self.calctimes['density_hartree'].append(time.time() - st)
+            
+            st = time.time()
             self.__J = self.__calculate_J()
+            self.calctimes['calculate_J'].append(time.time() - st)
+            
+            st = time.time()
             self.__XC, self.__Exc = self.__calculate_XC()
+            self.calctimes['calculate_XC'].append(time.time() - st)
+            
 
         # calculate Fock matrix
         self.__F = self.__H + self.__J + self.__XC

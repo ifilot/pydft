@@ -845,9 +845,9 @@ class MolecularGrid:
         self.__ylmgpts = np.ndarray((len(self.__atoms), 
                                          (self.__lmax+1)**2, 
                                          np.prod(self.__mweights.shape)))
-        for i,at in enumerate(self.__atoms):
+        for i,at in enumerate(self.__atoms):    # loop over atoms
             lmctr = 0
-            for l in range(0, self.__lmax+1):
+            for l in range(0, self.__lmax+1):   # loop over spherical harmonics
                 for m in range(-l, l+1):
                     self.__ylmgpts[i,lmctr,:] = spherical_harmonic(l, m, \
                                                 self.__theta_gridpoints[i,:], 

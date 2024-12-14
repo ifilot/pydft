@@ -12,7 +12,7 @@ from pydft import MoleculeBuilder, DFT
 #          settings.
 #
 
-CO = MoleculeBuilder().from_name("CO")
+CO = MoleculeBuilder().from_name("benzene")
 dft = DFT(CO, basis='sto3g')
 en = dft.scf(1e-4, verbose=True)
 print("Total electronic energy: %f Ht" % en)
