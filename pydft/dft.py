@@ -203,7 +203,7 @@ class DFT():
             self.__time_stats['iterations'].append(itertime)
             
             if verbose:
-                print('%03i | E = %12.6f | dE = %5.4e | %0.4f ms' % (niter+1, energy, ediff, itertime))
+                print('%03i | E = %12.6f | dE = %5.4e | %0.4f s' % (niter+1, energy, ediff, itertime))
             
             if niter > 0:
                 ediff = np.abs(energy - self.__energies[-2])

@@ -187,14 +187,17 @@ class AtomicGrid:
         """
         grad = self.get_gradient()
         #return np.linalg.norm(grad, axis=1)
-        return np.einsum('ij,ij->i', grad, grad)
+        return np.einsum('ij,ij->i', grad, grad, optimize=True)
 
     def count_electrons(self):
         """
         Sum over the electron density to obtain the number of electrons for
         this atomic cell
         """
-        return np.einsum('ij,ij,ij', self.__edens, self.__wgrid, self.__mweights)
+        return np.einsum('ij,ij,ij', self.__edens, 
+                                     self.__wgrid, 
+                                     self.__mweights,
+                                     optimize=True)
     
     def get_dfa_exchange(self):
         """
@@ -202,14 +205,20 @@ class AtomicGrid:
         """
         alpha = 2.0 / 3.0
         fac = -2.25 * alpha * np.power(0.75 / np.pi, 1.0 / 3.0)
-        return fac * np.einsum('ij,ij,ij', np.power(self.__edens, 4/3), self.__wgrid, self.__mweights)
+        return fac * np.einsum('ij,ij,ij', np.power(self.__edens, 4/3), 
+                                           self.__wgrid, 
+                                           self.__mweights,
+                                           optimize=True)
     
     def get_dfa_kinetic(self):
         """
         Get density functional approximation of the kinetic energy for this atomic cell
         """
         Ckin = 3.0 / 40.0 * (3 / np.pi)**(2/3) * (2 * np.pi)**2
-        return Ckin * np.einsum('ij,ij,ij', np.power(self.__edens, 5/3), self.__wgrid, self.__mweights)
+        return Ckin * np.einsum('ij,ij,ij', np.power(self.__edens, 5/3), 
+                                            self.__wgrid, 
+                                            self.__mweights,
+                                            optimize=True)
 
     def get_dfa_nuclear_local(self):
         """
@@ -231,7 +240,8 @@ class AtomicGrid:
                          self.__ylm, 
                          f, 
                          self.__wangpts,
-                         self.__mweights) * 4.0 * np.pi
+                         self.__mweights,
+                         optimize=True) * 4.0 * np.pi
 
     def get_bragg_slater_radius(self) -> float:
         """
@@ -307,9 +317,12 @@ class AtomicGrid:
         """
         # build Hartree potential
         pot = 1.0 / self.__rr
-        self.__htpot = np.einsum('ij,jk,i,ik->ik', self.__ulm, self.__ylm, pot, self.__edens)
+        self.__htpot = np.einsum('ij,jk,i,ik->ik', self.__ulm, 
+                                                   self.__ylm, pot, 
+                                                   self.__edens,
+                                                   optimize=True)
                     
-        return np.einsum('ij,ij', self.__htpot, self.__wgrid)
+        return np.einsum('ij,ij', self.__htpot, self.__wgrid, optimize=True)
     
     def calculate_coulomb_energy_interpolation(self):
         """
@@ -323,9 +336,13 @@ class AtomicGrid:
         # build Hartree potential
         pot = 1.0 / self.__rr
         ulmintp = self.calculate_interpolated_ulm(self.__rr).transpose()
-        self.__htpot = np.einsum('ij,jk,i,ik->ik', ulmintp, self.__ylm, pot, self.__edens)
+        self.__htpot = np.einsum('ij,jk,i,ik->ik', ulmintp, 
+                                                   self.__ylm, 
+                                                   pot, 
+                                                   self.__edens,
+                                                   optimize=True)
                     
-        return np.einsum('ij,ij', self.__htpot, self.__wgrid)
+        return np.einsum('ij,ij', self.__htpot, self.__wgrid, optimize=True)
     
     def __build_weight_grid(self):
         """

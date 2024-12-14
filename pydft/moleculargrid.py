@@ -87,13 +87,15 @@ class MolecularGrid:
         self.__densities = np.einsum('ijk,jl,ilk->ik', 
                                      self.__amplitudes, 
                                      P,
-                                     self.__amplitudes)
+                                     self.__amplitudes,
+                                     optimize=True)
         
         # also build the gradient of the density
         self.__gradients = 2.0 * np.einsum('ijk,jl,ilkm->ikm', 
                                            self.__amplitudes, 
                                            P,
-                                           self.__ampgrads)
+                                           self.__ampgrads,
+                                           optimize=True)
         
         # perform optional normalization
         if normalize:
@@ -251,7 +253,8 @@ class MolecularGrid:
     
         return np.einsum('ijk,ijk,ik', rho_lm_gpts,
                                        ylm,
-                                       np.array([an.get_weights() for an in self.__atomgrids]))
+                                       np.array([an.get_weights() for an in self.__atomgrids]),
+                                       optimize=True)
     
     def calculate_dfa_nuclear_attraction_local(self) -> float:
         """
@@ -302,7 +305,10 @@ class MolecularGrid:
         
         # for each grid point determine the Hartree potential from the 
         # spherical harmonic coefficients with respect to each atomic center
-        self.__ugpts = np.einsum('ijk,ik,ijk->k', ulmgpts, self.__rigridpoints, self.__ylmgpts)
+        self.__ugpts = np.einsum('ijk,ik,ijk->k', ulmgpts, 
+                                                  self.__rigridpoints, 
+                                                  self.__ylmgpts,
+                                                  optimize=True)
         
         return 0.5 * np.einsum('i,i,i', self.__ugpts, 
                                         np.array([an.get_density() for an in self.__atomgrids]).flatten(),
@@ -337,20 +343,18 @@ class MolecularGrid:
         
         # for each grid point determine the Hartree potential from the 
         # spherical harmonic coefficients with respect to each atomic center
-        self.__ugpts = np.einsum('ijk,ik,ijk->k', ulmgpts, self.__rigridpoints, self.__ylmgpts)
+        self.__ugpts = np.einsum('ijk,ik,ijk->k', ulmgpts, 
+                                                 self.__rigridpoints, 
+                                                 self.__ylmgpts,
+                                                 optimize=True)
         
         # construct coulombic repulsion matrix by integrating the interaction
         # of the hartree potential with the basis function amplitudes
-        N = len(self.__basis)
-        J = np.zeros((N,N))
-        for i in range(0, N):
-            for j in range(i, N):
-                J[i,j] = np.einsum('i,i,i,i', self.__ugpts, 
-                                              self.__fullgrid_amplitudes[i,:],
-                                              self.__fullgrid_amplitudes[j,:],
-                                              self.__mgw)
-                if i != j:
-                    J[j,i] = J[i,j]
+        J = np.einsum('k,ik,jk,k->ij', self.__ugpts, 
+                                     self.__fullgrid_amplitudes,
+                                     self.__fullgrid_amplitudes,
+                                     self.__mgw,
+                                     optimize=True)
         
         return J
         
@@ -400,15 +404,11 @@ class MolecularGrid:
         X = np.zeros((len(self.__basis), len(self.__basis)))
         
         # exchange parameters
-        for i in range(0, len(self.__basis)):
-            for j in range(i, len(self.__basis)):
-                X[i,j] = np.einsum('i,i,i,i', vfx, 
-                                              self.__fullgrid_amplitudes[i,:],
-                                              self.__fullgrid_amplitudes[j,:],
-                                              self.__mgw)
-                
-                if i != j:
-                    X[j,i] = X[i,j]
+        X = np.einsum('k,ik,jk,k->ij', vfx, 
+                                       self.__fullgrid_amplitudes,
+                                       self.__fullgrid_amplitudes,
+                                       self.__mgw,
+                                       optimize=True)
         
         return X, ex
     
@@ -435,15 +435,11 @@ class MolecularGrid:
         C = np.zeros((len(self.__basis), len(self.__basis)))
         
         # exchange parameters
-        for i in range(0, len(self.__basis)):
-            for j in range(i, len(self.__basis)):
-                C[i,j] = np.einsum('i,i,i,i', vfc, 
-                                              self.__fullgrid_amplitudes[i,:],
-                                              self.__fullgrid_amplitudes[j,:],
-                                              self.__mgw)
-                
-                if i != j:
-                    C[j,i] = C[i,j]
+        C = np.einsum('k,ik,jk,k->ij', vfc, 
+                                       self.__fullgrid_amplitudes,
+                                       self.__fullgrid_amplitudes,
+                                       self.__mgw,
+                                       optimize=True)
         
         return C, ec
 
@@ -474,7 +470,7 @@ class MolecularGrid:
         for i,cgf in enumerate(self.__basis):
             amps[i,:] = np.array([cgf.get_amp(p) for p in spoints])
         
-        dens = np.einsum('ik,ij,jk->k', amps, P, amps)
+        dens = np.einsum('ik,ij,jk->k', amps, P, amps, optimize=True)
         
         return dens
     
@@ -504,7 +500,7 @@ class MolecularGrid:
         for i,cgf in enumerate(self.__basis):
             amps[i,:] = np.array([cgf.get_amp(p) for p in spoints])
         
-        wfamp = np.einsum('ik,i->k', amps, c)
+        wfamp = np.einsum('ik,i->k', amps, c, optimize=True)
         
         return wfamp
     
