@@ -8,11 +8,13 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from pydft import MoleculeBuilder, DFT
 
-class TestDFT(unittest.TestCase):
+class TestFiniteDifferenceSchemes(unittest.TestCase):
 
     def test_co(self):
         """
-        Test DFT calculation of CO molecule
+        Test DFT calculation of CO molecule using various finite difference
+        schemes (always diagonal matrices, but with different number of
+                 non-zero diagonals)
         """
         mol_builder = MoleculeBuilder()
         mol = mol_builder.from_name('CO')

@@ -20,7 +20,8 @@ class DFT():
                  nangpts:int = 110,
                  lmax:int = 8,
                  fdpts:int=7,
-                 normalize:bool = True):
+                 normalize:bool = True,
+                 parallel:bool = True):
         """
         Constructs the DFT class
 
@@ -45,6 +46,8 @@ class DFT():
             density
         verbose : bool, optional
             whether to provide verbose output, by default False
+        parallel : bool, optional
+            whether to use multiprocessing features, by default False
         """
         self.__mol = mol
         self.__integrator = PyQInt()
@@ -57,6 +60,7 @@ class DFT():
         self.__lmax = lmax
         self.__functional = functional
         self.__normalize = normalize
+        self.__parallel = parallel
         
         # keep track of time
         self.calctimes = {
@@ -352,7 +356,8 @@ class DFT():
                                        nangpts=self.__nangpts,
                                        lmax=self.__lmax,
                                        fdpts=self.__fdpts,
-                                       functional=self.__functional)
+                                       functional=self.__functional,
+                                       parallel=self.__parallel)
         self.__molgrid.initialize() # molecular grid uses late initialization
 
         # build one-electron matrices; because these matrices are Hermetian,

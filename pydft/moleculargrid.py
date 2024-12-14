@@ -7,7 +7,9 @@ from .spherical_harmonics import spherical_harmonic
 from pyqint import PyQInt
 import pyqint as pq
 import time
+import multiprocessing
 from .xcfunctionals import Functionals
+from functools import partial
 
 class MolecularGrid:
     def __init__(self, 
@@ -17,7 +19,8 @@ class MolecularGrid:
                  nangpts:int=110, 
                  lmax:int=8,
                  fdpts:int=7,
-                 functional:str='svwn5'):
+                 functional:str='svwn5',
+                 parallel:bool=False):
         """
         Construct MolecularGrid
 
@@ -37,6 +40,8 @@ class MolecularGrid:
             number of grid point in finite difference scheme, by default 7
         functional : str, optional
             exchange-correlation functional, by default 'svwn5'
+        parallel : bool, optional
+             whether to use multiprocessing features, by default False
         """
         # keep track of build times
         self.construct_times = {}
@@ -51,6 +56,7 @@ class MolecularGrid:
         self.__basis = cgfs
         self.__functionals = Functionals(functional)
         self.__is_initialized = False
+        self.__enable_parallel = True
     
     def initialize(self):
         """
@@ -62,7 +68,7 @@ class MolecularGrid:
         if self.__is_initialized:
             return
 
-        self.__build_molecular_grid()
+        self.__build_molecular_grid(self.__enable_parallel)
         self.__build_amplitudes()
         self.__is_initialized = True
 
@@ -344,17 +350,17 @@ class MolecularGrid:
         # for each grid point determine the Hartree potential from the 
         # spherical harmonic coefficients with respect to each atomic center
         self.__ugpts = np.einsum('ijk,ik,ijk->k', ulmgpts, 
-                                                 self.__rigridpoints, 
-                                                 self.__ylmgpts,
-                                                 optimize=True)
+                                                  self.__rigridpoints, 
+                                                  self.__ylmgpts,
+                                                  optimize=True)
         
         # construct coulombic repulsion matrix by integrating the interaction
         # of the hartree potential with the basis function amplitudes
         J = np.einsum('k,ik,jk,k->ij', self.__ugpts, 
-                                     self.__fullgrid_amplitudes,
-                                     self.__fullgrid_amplitudes,
-                                     self.__mgw,
-                                     optimize=True)
+                                       self.__fullgrid_amplitudes,
+                                       self.__fullgrid_amplitudes,
+                                       self.__mgw,
+                                       optimize=True)
         
         return J
         
@@ -541,7 +547,7 @@ class MolecularGrid:
         #t2 = np.einsum('ij,jkl,ik->kl', P, grads, amps)
         #return t1 + t2
         
-        return 2.0 * np.einsum('ij,ikl,jk->kl', P, grads, amps)
+        return 2.0 * np.einsum('ij,ikl,jk->kl', P, grads, amps, optimize=True)
 
     def calculate_coulomb_potential_at_points(self, 
                                               pts:np.ndarray) -> np.ndarray:
@@ -729,7 +735,7 @@ class MolecularGrid:
             
         return mweights
 
-    def __build_molecular_grid(self):
+    def __build_molecular_grid(self, build_parallel=False):
         """
         Build the molecular grid from the atomic grids
         """
@@ -841,19 +847,60 @@ class MolecularGrid:
         self.__ylmgpts = np.ndarray((len(self.__atoms), 
                                          (self.__lmax+1)**2, 
                                          np.prod(self.__mweights.shape)))
-        for i,at in enumerate(self.__atoms):    # loop over atoms
-            lmctr = 0
-            for l in range(0, self.__lmax+1):   # loop over spherical harmonics
-                for m in range(-l, l+1):
-                    self.__ylmgpts[i,lmctr,:] = spherical_harmonic(l, m, \
-                                                self.__theta_gridpoints[i,:], 
-                                                self.__phi_gridpoints[i,:])
-                    lmctr += 1
+        
+        # perform parallellized calculation of spherical harmonics
+        if build_parallel:
+            atoms = list(range(len(self.__atoms)))
+            inputs = zip([self.__theta_gridpoints[i,:] for i in atoms], 
+                         [self.__phi_gridpoints[i,:] for i in atoms])
+            calculate_partial = partial(self.build_ylmgpts_atom, 
+                                        lmax=self.__lmax, 
+                                        npts=np.prod(self.__mweights.shape))
+            with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+                result = pool.map(calculate_partial, inputs)
+            for i,res in enumerate(result):
+                self.__ylmgpts[i,:,:] = res
+        else: # non-parallelized evaluation of spherical harmonics
+            for i,at in enumerate(self.__atoms):    # loop over atoms
+                self.__ylmgpts[i,:,:] = self.__build_ylmgpts_atom(i)
         self.construct_times['spherical_harmonics'] = time.time() - st
                     
         # collect complete weights for the full molecular grid
         weights = np.array([an.get_weights() for an in self.__atomgrids]).flatten()
         self.__mgw = np.multiply(weights, self.__mweights.flatten())
+
+    @staticmethod
+    def build_ylmgpts_atom(Omega, lmax, npts):
+        """
+        Get the spherical harmonic parameters for a single atom
+        
+        This function is 'pickable' and can be used in a multiprocessing pool
+        """
+        lmctr = 0
+        theta = Omega[0]
+        phi = Omega[1]
+        res = np.ndarray(((lmax+1)**2, npts))
+        for l in range(0, lmax+1):   # loop over spherical harmonics
+            for m in range(-l, l+1):
+                res[lmctr,:] = spherical_harmonic(l, m, \
+                                                  theta, 
+                                                  phi)
+                lmctr += 1
+        return res
+    
+    def __build_ylmgpts_atom(self, atidx):
+        """
+        Get the spherical harmonic parameters for a single atom
+        """
+        lmctr = 0
+        res = np.ndarray(((self.__lmax+1)**2, np.prod(self.__mweights.shape)))
+        for l in range(0, self.__lmax+1):   # loop over spherical harmonics
+            for m in range(-l, l+1):
+                res[lmctr,:] = spherical_harmonic(l, m, \
+                                                  self.__theta_gridpoints[atidx,:], 
+                                                  self.__phi_gridpoints[atidx,:])
+                lmctr += 1
+        return res
 
     def __build_amplitudes(self):
         """
