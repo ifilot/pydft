@@ -16,6 +16,7 @@ class MolecularGrid:
                  nshells:int=32, 
                  nangpts:int=110, 
                  lmax:int=8,
+                 fdpts:int=7,
                  functional:str='svwn5'):
         """
         Construct MolecularGrid
@@ -32,6 +33,8 @@ class MolecularGrid:
             number of angular sampling points per shell, by default 110
         lmax : int, optional
             maximum value for l for projection of spherical harmonics, by default 8
+        fdpts: int, optional
+            number of grid point in finite difference scheme, by default 7
         functional : str, optional
             exchange-correlation functional, by default 'svwn5'
         """
@@ -42,6 +45,7 @@ class MolecularGrid:
         self.__atoms = atoms
         self.__nelec = np.sum([nuc[1] for nuc in self.__atoms])
         self.__lmax = lmax
+        self.__fdpts = fdpts
         self.__nshells = nshells
         self.__nangpts = nangpts
         self.__basis = cgfs
@@ -741,7 +745,8 @@ class MolecularGrid:
             self.__atomgrids.append(AtomicGrid(atom, 
                                                self.__nshells, 
                                                self.__nangpts,
-                                               self.__lmax)
+                                               self.__lmax,
+                                               self.__fdpts)
                                     )
         self.construct_times['atomic_grids'] = time.time() - st
         

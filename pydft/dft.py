@@ -19,6 +19,7 @@ class DFT():
                  nshells:int = 32,
                  nangpts:int = 110,
                  lmax:int = 8,
+                 fdpts:int=7,
                  normalize:bool = True):
         """
         Constructs the DFT class
@@ -38,6 +39,8 @@ class DFT():
             number of angular sampling points, by default 110
         lmax : int, optional
             maximum value of l in the spherical harmonic expansion, by default 8
+        fdpts: int, optional
+            number of grid point in finite difference scheme, by default 7
         normalize: whether to perform intermediary normalization of the electron 
             density
         verbose : bool, optional
@@ -50,6 +53,7 @@ class DFT():
         self.__itermax = 100
         self.__nshells = nshells
         self.__nangpts = nangpts
+        self.__fdpts = fdpts
         self.__lmax = lmax
         self.__functional = functional
         self.__normalize = normalize
@@ -310,8 +314,9 @@ class DFT():
         self.__molgrid = MolecularGrid(self.__nuclei, 
                                        self.__cgfs, 
                                        nshells=self.__nshells, 
-                                       nangpts=self.__nangpts, 
+                                       nangpts=self.__nangpts,
                                        lmax=self.__lmax,
+                                       fdpts=self.__fdpts,
                                        functional=self.__functional)
         self.__molgrid.initialize() # molecular grid uses late initialization
 

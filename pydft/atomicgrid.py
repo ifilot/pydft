@@ -8,7 +8,8 @@ from .spherical_harmonics import spherical_harmonic
 import math
 
 class AtomicGrid:
-    def __init__(self, at, nshells:int=32, nangpts:int=110, lmax:int=8):
+    def __init__(self, at, nshells:int=32, nangpts:int=110, lmax:int=8,
+                 fdpts:int=7):
         """
         Initialize the class
         
@@ -17,9 +18,16 @@ class AtomicGrid:
         nangpts: number of angular points
         """
         self.__atom = at
-        self.__cp = at[0]   # center of the atomic grid (= position of the atom)
-        self.__aidx = at[1] # element id
-        self.__nshells = nshells
+        self.__cp = at[0]           # center of the atomic grid (= position of the atom)
+        self.__aidx = at[1]         # element id
+        self.__nshells = nshells    # number of radial shells
+        self.__fdpts = fdpts        # number of grid points used in finite difference scheme
+        
+        # perform some parameter checking
+        if self.__fdpts < 3:
+            raise Exception('Number of grid points in stencil must at least be 3')
+        if self.__fdpts % 2 != 1:
+            raise Exception('Only odd number of grid points are allowed')
         
         # set coefficients and parameters
         self.__set_bragg_slater_radius()
@@ -370,12 +378,20 @@ class AtomicGrid:
         """
         Construct the finite difference matrix to solve for Ulm
         
+        The discretization points are automatically generated using the
+        '__calculate_fd_coeff' function. The user can specify the number of
+        grid points used via npts. The script always constructs a
+        npts-diagonal matrix, e.g. a heptadiagonal matrix when n=7 or a
+        pentadiagonal matrix when n-5.
+        
         r : vector of distances
         rm: half of the Bragg-Slater radius
+        nrpts: number of stencil points
         """
         N = len(r)
         A = np.zeros((N+2, N+2))
-        h = 1.0 / float(N+1)
+        h = 1.0 / float(N+1)       
+        Np = self.__fdpts//2
         
         for i in range(0, N+2):
             c1 = 0.0
@@ -385,59 +401,33 @@ class AtomicGrid:
                 c1 = self.__dzdrsq(r[i-1], rm)
                 c2 = self.__d2zdr2(r[i-1], rm)
             
+            # first point
             if i == 0:
                 A[0,0] = 1.0
                 continue
             
-            if i == 1:
-                c1 /= 12.0 * h * h
-                c2 /= 12.0 * h
-                A[i,0] = 11.0 * c1 -3.0 * c2
-                A[i,1] = -20.0 * c1 - 10.0 * c2
-                A[i,2] = 6.0 * c1 + 18.0 * c2
-                A[i,3] = 4.0 * c1 - 6.0 * c2
-                A[i,4] = -1.0 * c1 + 1.0 * c2
-                continue
-            
-            if i == 2:
-                c1 /= 12.0 * h * h
-                c2 /= 60.0 * h
-                A[i,0] = -1.0 * c1 + 3.0 * c2
-                A[i,1] = 16.0 * c1 - 30.0 * c2
-                A[i,2] = -30.0 * c1 - 20.0 * c2
-                A[i,3] = 16.0 * c1 + 60.0 * c2
-                A[i,4] = -1.0 * c1 - 15.0 * c2
-                A[i,5] = 0.0 * c1 + 2.0 * c2
-                continue
-            
-            if i == N-1:
-                c1 /= 12.0 * h * h
-                c2 /= 60.0 * h
-                A[i,N-4] = 0.0 * c1 - 2.0 * c2
-                A[i,N-3] = -1.0 * c1 + 15.0 * c2
-                A[i,N-2] = 16.0 * c1 - 60.0 * c2
-                A[i,N-1] = -30.0 * c1 + 20.0 * c2
-                A[i,N] = 16.0 * c1 + 30.0 * c2
-                A[i,N+1] = -1.0 * c1 - 3.0 * c2
-                continue
-            
-            if i == N:
-                c1 /= 12.0 * h * h
-                c2 /= 12.0 * h
-                A[i,N-3] = -1.0 * c1 - 1.0 * c2
-                A[i,N-2] = 4.0 * c1 + 6.0 * c2
-                A[i,N-1] = 6.0 * c1 - 18.0 * c2
-                A[i,N] = -20.0 * c1 + 10.0 * c2
-                A[i,N+1] = 11.0 * c1 + 3.0 * c2
-                continue
-            
+            # last point
             if i == N+1:
                 A[i,i] = 1.0
                 continue
             
-            c1 *= self.__calculate_fd_coeff(np.arange(-3,4), 2)
-            c2 *= self.__calculate_fd_coeff(np.arange(-3,4), 1)
-            A[i,(i-3):(i+4)] = c1 / h**2 + c2 / h
+            # left edge, excluding first point
+            if i < Np:
+                c1 *= self.__calculate_fd_coeff(np.arange(0,i+Np+1)-i, 2)
+                c2 *= self.__calculate_fd_coeff(np.arange(0,i+Np+1)-i, 1)
+                A[i,0:Np+i+1] = c1 / h**2 + c2 / h
+                continue
+            
+            # right edge, excluding last point
+            if i > (N - Np + 1):
+                c1 *= self.__calculate_fd_coeff(np.arange(i-Np,N+2)-i, 2)
+                c2 *= self.__calculate_fd_coeff(np.arange(i-Np,N+2)-i, 1)
+                A[i,i-Np:N+2] = c1 / h**2 + c2 / h
+                continue
+            
+            c1 *= self.__calculate_fd_coeff(np.arange(-Np,Np+1), 2)
+            c2 *= self.__calculate_fd_coeff(np.arange(-Np,Np+1), 1)
+            A[i,(i-Np):(i+Np+1)] = c1 / h**2 + c2 / h
             
         return A
 
