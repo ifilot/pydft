@@ -19,8 +19,9 @@ class DFT():
                  nshells:int = 32,
                  nangpts:int = 110,
                  lmax:int = 8,
+                 fdpts:int=7,
                  normalize:bool = True,
-                 verbose:bool = False):
+                 parallel:bool = True):
         """
         Constructs the DFT class
 
@@ -39,22 +40,34 @@ class DFT():
             number of angular sampling points, by default 110
         lmax : int, optional
             maximum value of l in the spherical harmonic expansion, by default 8
+        fdpts: int, optional
+            number of grid point in finite difference scheme, by default 7
         normalize: whether to perform intermediary normalization of the electron 
             density
         verbose : bool, optional
             whether to provide verbose output, by default False
+        parallel : bool, optional
+            whether to use multiprocessing features, by default False
         """
         self.__mol = mol
         self.__integrator = PyQInt()
         self.__basis = basis
-        self.__verbose = verbose
         self.__time_stats = {}
         self.__itermax = 100
         self.__nshells = nshells
         self.__nangpts = nangpts
+        self.__fdpts = fdpts
         self.__lmax = lmax
         self.__functional = functional
         self.__normalize = normalize
+        self.__parallel = parallel
+        
+        # keep track of time
+        self.calctimes = {
+            'density_hartree': [],
+            'calculate_J': [],
+            'calculate_XC': [],
+        }
 
     def get_data(self) -> dict:
         """
@@ -85,6 +98,7 @@ class DFT():
         * :code:`orbc`: coeffient matrix (duplicate)
         * :code:`orbe`: molecular orbital eigenvalues
         * :code:`enucrep`: electrostatic repulsion of the nuclei
+        * :code:`timedata`: computation time for various parts of the calculation
         
         """
         data = {
@@ -104,6 +118,10 @@ class DFT():
             'orbc': self.__C,       # coeffient matrix (duplicate)
             'orbe': self.__e,       # molecular orbital eigenvalues
             'enucrep': self.__enuc, # electrostatic repulsion of the nuclei
+            
+            # also output computation times
+            'timedata': {'construct_times': self.__molgrid.construct_times,
+                         'calc_times': self.calctimes},
         }
         
         return data
@@ -155,7 +173,7 @@ class DFT():
 
         return self.__molgrid.get_gradient_at_points(spoints, self.__P)
     
-    def scf(self, tol:float=1e-5) -> float:
+    def scf(self, tol:float=1e-5, verbose:bool=False) -> float:
         """
         Perform the self-consistent field procedure
 
@@ -177,6 +195,7 @@ class DFT():
 
         # start SCF iterative procedure
         nitfin = 0
+        ediff = 0
         for niter in range(0, self.__itermax):
             start = time.time()
             energy = self.__iterate(niter, 
@@ -187,20 +206,20 @@ class DFT():
             itertime = stop - start
             self.__time_stats['iterations'].append(itertime)
             
-            if self.__verbose:
-                print('%03i | Energy: %12.6f | %0.4f ms' % (niter+1, energy, itertime))
+            if verbose:
+                print('%03i | E = %12.6f | dE = %5.4e | %0.4f s' % (niter+1, energy, ediff, itertime))
             
-            if niter > 2:
+            if niter > 0:
                 ediff = np.abs(energy - self.__energies[-2])
+            if niter > 2:
                 if ediff < tol:
                     # terminate giis self-convergence and continue with mixing
                     nitfin += 1
-                    
-                    if nitfin < 3:
+                    if nitfin < 2:
                         continue
                     
                     # terminate self-convergence cycle
-                    if self.__verbose:
+                    if verbose:
                         print("Stopping SCF cycle, convergence reached.")
                         
                         # update density matrix from last found coefficient matrix
@@ -208,6 +227,19 @@ class DFT():
                     break
 
         return energy
+    
+    def print_time_statistics(self):
+        print('-- Construction times --')
+        print('Atomic grids:                                %.4f s' % self.__molgrid.construct_times['atomic_grids'])
+        print('Fuzzy cell decomposition:                    %.4f s' % self.__molgrid.construct_times['fuzzy_cell_decomposition'])
+        print('Spherical harmonics:                         %.4f s' % self.__molgrid.construct_times['spherical_harmonics'])
+        print('Nuclear distance and potential:              %.4f s' % self.__molgrid.construct_times['nuclear_distance_and_potential'])
+        print('Basis set amplitudes:                        %.4f s' % self.__molgrid.construct_times['basis_function_amplitudes'])
+        print()
+        print('-- Calculation times --')
+        print('Classical e-e repulsion matrix (J):          %.4f s' % np.average(self.calctimes['calculate_J']))
+        print('Electron density and Hartree potential (U):  %.4f s' % np.average(self.calctimes['density_hartree']))
+        print('Exchange-correlation matrices (XC):          %.4f s' % np.average(self.calctimes['calculate_XC']))
     
     def get_construction_times(self) -> dict:
         """
@@ -241,9 +273,18 @@ class DFT():
         # calculate J and XC matrices based on the current electron
         # density estimate as captured in the density matrix P
         if np.any(self.__P):
+            st = time.time()
             self.__molgrid.build_density(self.__P, normalize=self.__normalize)
+            self.calctimes['density_hartree'].append(time.time() - st)
+            
+            st = time.time()
             self.__J = self.__calculate_J()
+            self.calctimes['calculate_J'].append(time.time() - st)
+            
+            st = time.time()
             self.__XC, self.__Exc = self.__calculate_XC()
+            self.calctimes['calculate_XC'].append(time.time() - st)
+            
 
         # calculate Fock matrix
         self.__F = self.__H + self.__J + self.__XC
@@ -312,9 +353,11 @@ class DFT():
         self.__molgrid = MolecularGrid(self.__nuclei, 
                                        self.__cgfs, 
                                        nshells=self.__nshells, 
-                                       nangpts=self.__nangpts, 
+                                       nangpts=self.__nangpts,
                                        lmax=self.__lmax,
-                                       functional=self.__functional)
+                                       fdpts=self.__fdpts,
+                                       functional=self.__functional,
+                                       parallel=self.__parallel)
         self.__molgrid.initialize() # molecular grid uses late initialization
 
         # build one-electron matrices; because these matrices are Hermetian,

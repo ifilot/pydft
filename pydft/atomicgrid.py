@@ -5,9 +5,11 @@ from scipy.interpolate import CubicSpline
 from . import bragg_slater
 from .angulargrid import AngularGrid
 from .spherical_harmonics import spherical_harmonic
+import math
 
 class AtomicGrid:
-    def __init__(self, at, nshells:int=32, nangpts:int=110, lmax:int=8):
+    def __init__(self, at, nshells:int=32, nangpts:int=110, lmax:int=8,
+                 fdpts:int=7):
         """
         Initialize the class
         
@@ -16,9 +18,16 @@ class AtomicGrid:
         nangpts: number of angular points
         """
         self.__atom = at
-        self.__cp = at[0]   # center of the atomic grid (= position of the atom)
-        self.__aidx = at[1] # element id
-        self.__nshells = nshells
+        self.__cp = at[0]           # center of the atomic grid (= position of the atom)
+        self.__aidx = at[1]         # element id
+        self.__nshells = nshells    # number of radial shells
+        self.__fdpts = fdpts        # number of grid points used in finite difference scheme
+        
+        # perform some parameter checking
+        if self.__fdpts < 3:
+            raise Exception('Number of grid points in stencil must at least be 3')
+        if self.__fdpts % 2 != 1:
+            raise Exception('Only odd number of grid points are allowed')
         
         # set coefficients and parameters
         self.__set_bragg_slater_radius()
@@ -178,14 +187,17 @@ class AtomicGrid:
         """
         grad = self.get_gradient()
         #return np.linalg.norm(grad, axis=1)
-        return np.einsum('ij,ij->i', grad, grad)
+        return np.einsum('ij,ij->i', grad, grad, optimize=True)
 
     def count_electrons(self):
         """
         Sum over the electron density to obtain the number of electrons for
         this atomic cell
         """
-        return np.einsum('ij,ij,ij', self.__edens, self.__wgrid, self.__mweights)
+        return np.einsum('ij,ij,ij', self.__edens, 
+                                     self.__wgrid, 
+                                     self.__mweights,
+                                     optimize=True)
     
     def get_dfa_exchange(self):
         """
@@ -193,14 +205,20 @@ class AtomicGrid:
         """
         alpha = 2.0 / 3.0
         fac = -2.25 * alpha * np.power(0.75 / np.pi, 1.0 / 3.0)
-        return fac * np.einsum('ij,ij,ij', np.power(self.__edens, 4/3), self.__wgrid, self.__mweights)
+        return fac * np.einsum('ij,ij,ij', np.power(self.__edens, 4/3), 
+                                           self.__wgrid, 
+                                           self.__mweights,
+                                           optimize=True)
     
     def get_dfa_kinetic(self):
         """
         Get density functional approximation of the kinetic energy for this atomic cell
         """
         Ckin = 3.0 / 40.0 * (3 / np.pi)**(2/3) * (2 * np.pi)**2
-        return Ckin * np.einsum('ij,ij,ij', np.power(self.__edens, 5/3), self.__wgrid, self.__mweights)
+        return Ckin * np.einsum('ij,ij,ij', np.power(self.__edens, 5/3), 
+                                            self.__wgrid, 
+                                            self.__mweights,
+                                            optimize=True)
 
     def get_dfa_nuclear_local(self):
         """
@@ -222,7 +240,8 @@ class AtomicGrid:
                          self.__ylm, 
                          f, 
                          self.__wangpts,
-                         self.__mweights) * 4.0 * np.pi
+                         self.__mweights,
+                         optimize=True) * 4.0 * np.pi
 
     def get_bragg_slater_radius(self) -> float:
         """
@@ -298,9 +317,12 @@ class AtomicGrid:
         """
         # build Hartree potential
         pot = 1.0 / self.__rr
-        self.__htpot = np.einsum('ij,jk,i,ik->ik', self.__ulm, self.__ylm, pot, self.__edens)
+        self.__htpot = np.einsum('ij,jk,i,ik->ik', self.__ulm, 
+                                                   self.__ylm, pot, 
+                                                   self.__edens,
+                                                   optimize=True)
                     
-        return np.einsum('ij,ij', self.__htpot, self.__wgrid)
+        return np.einsum('ij,ij', self.__htpot, self.__wgrid, optimize=True)
     
     def calculate_coulomb_energy_interpolation(self):
         """
@@ -314,9 +336,13 @@ class AtomicGrid:
         # build Hartree potential
         pot = 1.0 / self.__rr
         ulmintp = self.calculate_interpolated_ulm(self.__rr).transpose()
-        self.__htpot = np.einsum('ij,jk,i,ik->ik', ulmintp, self.__ylm, pot, self.__edens)
+        self.__htpot = np.einsum('ij,jk,i,ik->ik', ulmintp, 
+                                                   self.__ylm, 
+                                                   pot, 
+                                                   self.__edens,
+                                                   optimize=True)
                     
-        return np.einsum('ij,ij', self.__htpot, self.__wgrid)
+        return np.einsum('ij,ij', self.__htpot, self.__wgrid, optimize=True)
     
     def __build_weight_grid(self):
         """
@@ -369,12 +395,20 @@ class AtomicGrid:
         """
         Construct the finite difference matrix to solve for Ulm
         
+        The discretization points are automatically generated using the
+        '__calculate_fd_coeff' function. The user can specify the number of
+        grid points used via npts. The script always constructs a
+        npts-diagonal matrix, e.g. a heptadiagonal matrix when n=7 or a
+        pentadiagonal matrix when n-5.
+        
         r : vector of distances
         rm: half of the Bragg-Slater radius
+        nrpts: number of stencil points
         """
         N = len(r)
         A = np.zeros((N+2, N+2))
-        h = 1.0 / float(N+1)
+        h = 1.0 / float(N+1)       
+        Np = self.__fdpts//2
         
         for i in range(0, N+2):
             c1 = 0.0
@@ -384,67 +418,48 @@ class AtomicGrid:
                 c1 = self.__dzdrsq(r[i-1], rm)
                 c2 = self.__d2zdr2(r[i-1], rm)
             
+            # first point
             if i == 0:
                 A[0,0] = 1.0
                 continue
             
-            if i == 1:
-                c1 /= 12.0 * h * h
-                c2 /= 12.0 * h
-                A[i,0] = 11.0 * c1 -3.0 * c2
-                A[i,1] = -20.0 * c1 - 10.0 * c2
-                A[i,2] = 6.0 * c1 + 18.0 * c2
-                A[i,3] = 4.0 * c1 - 6.0 * c2
-                A[i,4] = -1.0 * c1 + 1.0 * c2
-                continue
-            
-            if i == 2:
-                c1 /= 12.0 * h * h
-                c2 /= 60.0 * h
-                A[i,0] = -1.0 * c1 + 3.0 * c2
-                A[i,1] = 16.0 * c1 - 30.0 * c2
-                A[i,2] = -30.0 * c1 - 20.0 * c2
-                A[i,3] = 16.0 * c1 + 60.0 * c2
-                A[i,4] = -1.0 * c1 - 15.0 * c2
-                A[i,5] = 0.0 * c1 + 2.0 * c2
-                continue
-            
-            if i == N-1:
-                c1 /= 12.0 * h * h
-                c2 /= 60.0 * h
-                A[i,N-4] = 0.0 * c1 - 2.0 * c2
-                A[i,N-3] = -1.0 * c1 + 15.0 * c2
-                A[i,N-2] = 16.0 * c1 - 60.0 * c2
-                A[i,N-1] = -30.0 * c1 + 20.0 * c2
-                A[i,N] = 16.0 * c1 + 30.0 * c2
-                A[i,N+1] = -1.0 * c1 - 3.0 * c2
-                continue
-            
-            if i == N:
-                c1 /= 12.0 * h * h
-                c2 /= 12.0 * h
-                A[i,N-3] = -1.0 * c1 - 1.0 * c2
-                A[i,N-2] = 4.0 * c1 + 6.0 * c2
-                A[i,N-1] = 6.0 * c1 - 18.0 * c2
-                A[i,N] = -20.0 * c1 + 10.0 * c2
-                A[i,N+1] = 11.0 * c1 + 3.0 * c2
-                continue
-            
+            # last point
             if i == N+1:
                 A[i,i] = 1.0
                 continue
             
-            c1 /= 180.0 * h * h 
-            c2 /= 60.0 * h
-            A[i,i-3] = 2.0 * c1 - 1.0 * c2
-            A[i,i-2] = -27.0 * c1 + 9.0 * c2
-            A[i,i-1] = 270.0 * c1 - 45.0 * c2
-            A[i,i]   = -490.0 * c1
-            A[i,i+1] = 270.0 * c1 + 45.0 * c2
-            A[i,i+2] = -27.0 * c1 - 9.0 * c2
-            A[i,i+3] = 2.0 * c1 + 1.0 * c2
+            # left edge, excluding first point
+            if i < Np:
+                c1 *= self.__calculate_fd_coeff(np.arange(0,i+Np+1)-i, 2)
+                c2 *= self.__calculate_fd_coeff(np.arange(0,i+Np+1)-i, 1)
+                A[i,0:Np+i+1] = c1 / h**2 + c2 / h
+                continue
+            
+            # right edge, excluding last point
+            if i > (N - Np + 1):
+                c1 *= self.__calculate_fd_coeff(np.arange(i-Np,N+2)-i, 2)
+                c2 *= self.__calculate_fd_coeff(np.arange(i-Np,N+2)-i, 1)
+                A[i,i-Np:N+2] = c1 / h**2 + c2 / h
+                continue
+            
+            c1 *= self.__calculate_fd_coeff(np.arange(-Np,Np+1), 2)
+            c2 *= self.__calculate_fd_coeff(np.arange(-Np,Np+1), 1)
+            A[i,(i-Np):(i+Np+1)] = c1 / h**2 + c2 / h
             
         return A
+
+    def __calculate_fd_coeff(self, x, k):
+        """
+        Calculate finite difference coefficients
+        
+        x: sampling points
+        k: derivative order
+        """
+        T = np.vander(x, increasing=True).transpose()
+        b = np.zeros(len(x))
+        b[k] = math.factorial(k)
+
+        return np.linalg.solve(T,b)
 
     def __set_bragg_slater_radius(self):
         """
