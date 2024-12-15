@@ -154,11 +154,196 @@ Adjusting grid and discretization schemes
 -----------------------------------------
 
 By default, PyDFT uses 32 radial grid points and 110 angular grid points per
-atom. Furthermore, the finite-difference discretization scheme used to solve
-the Poisson equation uses 7 adjacent points. These settings can be adjusted to
-reduce computational time or to increase upon the accuracy.
+atom. To calculate the Hartree potential, the electron density is projected onto
+spherical harmonics with a maximum angular momentum of :math:`l_{\text{max}} =
+8`. The finite-difference discretization scheme used to solve the Poisson
+equation uses 7 adjacent points. All these settings can be adjusted to
+potentially reduce computational time or to increase upon the accuracy. In the
+following subsections, this is explored in more detail. In the graph below, a
+visual summary of the scaling of the parameters in terms of computing time is
+provided.
 
+.. figure:: _static/img/user_interface/09-parameter-scaling.png
 
+Number of radial shells
+#######################
+
+In the listing below, the scaling with respect to the number of radial shells is
+shown. It can be readily seen that there are no more significant changes in the
+total electronic energy after :math:`N_{r} = 64`. On the basis of these results,
+it can be found that the computation time scales with :math:`t \propto N_{r}^{0.3725}`.
+
+.. list-table::
+   :header-rows: 1
+
+   * - :math:`N_{r}`
+     - Energy [Ht]
+     - Computation Time (s)
+   * - 8
+     - -114.0908
+     - 3.4304
+   * - 16
+     - -111.0566
+     - 3.6955
+   * - 32
+     - -111.1468
+     - 4.1970
+   * - 64
+     - -111.1495
+     - 4.9463
+   * - 92
+     - -111.1495
+     - 5.5899
+   * - 128
+     - -111.1495
+     - 6.5389
+   * - 256
+     - -111.1495
+     - 10.0511
+
+Number of angular grid points
+#############################
+
+:program:`PyDFT` uses by default 110 angular points per spherical shell. From
+the listing below, it can be seen that this yields decent accuracy in terms of
+energy, though the accuracy can be improved a bit further by using 194 or more
+angular points. On the basis of these results, it can be found that the
+computation time scales with :math:`t\propto N_{r}^{0.3344}`.
+
+.. list-table::
+   :header-rows: 1
+
+   * - :math:`N_{a}`
+     - Energy
+     - Computation Time (s)
+   * - 38
+     - -111.1226
+     - 4.1232
+   * - 74
+     - -111.1698
+     - 4.8680
+   * - 110
+     - -111.1495
+     - 5.4705
+   * - 194
+     - -111.1503
+     - 6.3094
+   * - 302
+     - -111.1503
+     - 7.0128
+   * - 590
+     - -111.1503
+     - 10.1610
+
+Maximum angular momentum
+########################
+
+For the calculation of the Hartree potential, the electron density is projected
+per radial shell onto spherical harmonics. The highest angular momentum used for
+the projection is determined by the :code:`lmax` parameter, which by default is
+set to :math:`l_{\text{max}} =8`. Increasing this value further shows some
+irregularities in terms of the energy, which are assigned to increased numerical
+noise in the linear expansion coefficients used in the expansion scheme. The
+total number of spherical harmonics used scales with :math:`N_{\text{sh}}
+\propto l_{\text{max}}^{2}`, hence we see somewhat steeper scaling in terms of
+computational time for this parameter. On the basis of these results, it can be
+found that the computation time scales with :math:`t\propto
+l_{\text{max}}^{1.064}`.
+
+It is relevant to mention that the original paper of Becke mentions that the
+ideal value for :math:`l_{\text{max}} \approx l_{\text{quad}}/2` which yields
+:math:`l_{\text{max}}` values of 5, 8, 11 and 14 for 50, 110, 194 and 302
+angular points.
+
+.. list-table::
+   :header-rows: 1
+
+   * - :math:`l_{\text{max}}`
+     - Energy
+     - Computation Time (s)
+   * - 2
+     - -111.0728
+     - 3.7725
+   * - 3
+     - -111.1175
+     - 4.0743
+   * - 4
+     - -111.1412
+     - 4.4981
+   * - 6
+     - -111.1511
+     - 4.9934
+   * - 8
+     - -111.1503
+     - 6.0379
+   * - 12
+     - -111.1489
+     - 8.5445
+   * - 16
+     - -111.1489
+     - 12.2454
+   * - 24
+     - -111.0209
+     - 22.8109
+
+Number discretization points
+############################
+
+When calculating the Hartree potential, a second-order differential equation is
+solved for all spherical shells and for each spherical harmonic. This
+second-order differential equation is solved using a finite-difference
+approximation. For this finite-difference approximation, the number of points
+used to establish the first- and second-order derivatives can be set. In the
+following analysis, we examine the total electronic energy and computation time
+as functions of the number of discretization points. It is evident that beyond 7
+discretization points, the total electronic energy remains unchanged. This is
+because the coefficients associated with points farther from the point of
+interest—where the derivative is calculated—become increasingly smaller.
+Consequently, the contribution of distant points diminishes rapidly, rendering
+expansions to a higher number of discretization points inefficient.
+Additionally, we observe minimal variation in computation time, which can be
+attributed to the exceptional efficiency of solving linear matrix equations. As
+a result, this aspect is not a significant computational bottleneck in the code.
+
+.. list-table::
+   :header-rows: 1
+
+   * - :math:`N_{\text{fd}}`
+     - Energy
+     - Computation Time (s)
+   * - 3
+     - -111.1028
+     - 5.8947
+   * - 5
+     - -111.1501
+     - 5.7674
+   * - 7
+     - -111.1503
+     - 6.3035
+   * - 9
+     - -111.1503
+     - 5.9776
+   * - 11
+     - -111.1503
+     - 5.8185
+   * - 13
+     - -111.1503
+     - 5.7800
+   * - 15
+     - -111.1503
+     - 5.8533
+   * - 17
+     - -111.1503
+     - 5.8799
+
+Reproducing analysis
+####################
+
+To reproduce the analysis, one can use the script as found below.
+
+.. literalinclude:: scripts/09-parameter-scaling.py
+    :language: python
+    :linenos:
 
 Self-consistent field matrices
 ------------------------------
@@ -244,7 +429,22 @@ method.
 Isosurfaces
 ###########
 
-Build isosurfaces
+Generating an isosurface is very similar to generating a contour plot, but with
+the notable difference that the orbital has to be sampled in three-dimensional
+space. In the script below, an example is provided for one of the :math:`1\pi`
+orbitals of CO. Observe that for generating an isosurface, the algorithm has to
+be executed twice, once for the positive lobe and once for the negative lobe.
+The isosurfaces are stored in so-called `Polygon File Format
+<https://en.wikipedia.org/wiki/PLY_(file_format)>`_ files which can be used in
+your favorite rendering program.
+
+.. note::
+    Isosurface generation requires the :program:`PyTessel` package to be
+    installed. More information can be found `here <https://pytessel.imc-tue.nl>`_.
+
+.. literalinclude:: scripts/05-isosurfaces.py
+    :language: python
+    :linenos:
 
 Analyzing the Becke grid
 ------------------------
