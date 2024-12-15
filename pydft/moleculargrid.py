@@ -10,6 +10,7 @@ import time
 import multiprocessing
 from .xcfunctionals import Functionals
 from functools import partial
+import platform
 
 class MolecularGrid:
     def __init__(self, 
@@ -56,7 +57,7 @@ class MolecularGrid:
         self.__basis = cgfs
         self.__functionals = Functionals(functional)
         self.__is_initialized = False
-        self.__enable_parallel = True
+        self.__enable_parallel = parallel
     
     def initialize(self):
         """
@@ -848,15 +849,20 @@ class MolecularGrid:
                                          (self.__lmax+1)**2, 
                                          np.prod(self.__mweights.shape)))
         
-        # perform parallellized calculation of spherical harmonics
-        if build_parallel:
+        # perform parallellized calculation of spherical harmonics; this 
+        # unfortunately only works on Linux
+        if build_parallel and platform.system() != "Windows":
             atoms = list(range(len(self.__atoms)))
             inputs = zip([self.__theta_gridpoints[i,:] for i in atoms], 
                          [self.__phi_gridpoints[i,:] for i in atoms])
             calculate_partial = partial(self.build_ylmgpts_atom, 
                                         lmax=self.__lmax, 
                                         npts=np.prod(self.__mweights.shape))
-            with multiprocessing.Pool(processes=multiprocessing.cpu_count()) as pool:
+            
+            # only parallellize over the atoms
+            ncpu = min(multiprocessing.cpu_count(), len(self.__atoms))
+            
+            with multiprocessing.Pool(processes=ncpu) as pool:
                 result = pool.map(calculate_partial, inputs)
             for i,res in enumerate(result):
                 self.__ylmgpts[i,:,:] = res
