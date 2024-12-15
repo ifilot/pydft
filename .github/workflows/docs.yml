@@ -19,7 +19,7 @@ jobs:
       run: cd docs && make html
     - name: Upload math result for job 1
       uses: actions/upload-artifact@v3
-      with:
+    with:
         name: html-docs
         path: ./docs/_build/html
 
