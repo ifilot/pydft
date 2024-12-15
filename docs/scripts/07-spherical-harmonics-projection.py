@@ -6,8 +6,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 def main():
     # perform DFT calculation on the CO molecule
     co = MoleculeBuilder().from_name("CO")
-    dft = DFT(co, basis='sto3g', verbose=False)
-    en = dft.scf(1e-6)
+    dft = DFT(co, basis='sto3g')
+    en = dft.scf(1e-6, verbose=False)
     
     # get the projection onto the spherical harmonics
     lmprojection = dft.get_molgrid_copy().get_rho_lm_atoms()
@@ -16,7 +16,6 @@ def main():
     plot_spherical_harmonic_projection(ax[1], fig, lmprojection[0], title='O')
     plot_spherical_harmonic_projection(ax[0], fig, lmprojection[1], title='C')
     plt.tight_layout()
-    
 
 def plot_spherical_harmonic_projection(ax, fig, mat, minval=5e-2, title=None):
     im = ax.imshow(np.flip(mat, axis=0), origin='lower', cmap='PiYG', vmin=-minval,vmax=minval)

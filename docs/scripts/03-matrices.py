@@ -5,12 +5,12 @@ import matplotlib.pyplot as plt
 def main():
     # perform DFT calculation on the CO molecule
     co = MoleculeBuilder().from_name("CO")
-    dft = DFT(co, basis='sto3g', verbose=False)
-    en = dft.scf(1e-6)
+    dft = DFT(co, basis='sto3g')
+    en = dft.scf(1e-6, verbose=False)
     
     # build list of basis functions
     labels = []
-    for a in co.atoms:
+    for a in co.get_atoms():
         for o in ['1s', '2s', '2px', '2py', '2pz']:
             labels.append('%s - %s' % (a[0],o))
     

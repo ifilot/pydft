@@ -6,8 +6,8 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 def main():
     # perform DFT calculation on the CO molecule
     co = MoleculeBuilder().from_name("CO")
-    dft = DFT(co, basis='sto3g', verbose=False)
-    en = dft.scf(1e-6)
+    dft = DFT(co, basis='sto3g')
+    en = dft.scf(1e-6, verbose=False)
     
     # grab molecular orbital energies and coefficients
     orbc = dft.get_data()['C']
