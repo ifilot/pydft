@@ -150,6 +150,16 @@ gradient magnitude using :meth:`pydft.DFT.get_gradient_at_points`.
 
 .. figure:: _static/img/user_interface/02-electron-density-gradient.png
 
+Adjusting grid and discretization schemes
+-----------------------------------------
+
+By default, PyDFT uses 32 radial grid points and 110 angular grid points per
+atom. Furthermore, the finite-difference discretization scheme used to solve
+the Poisson equation uses 7 adjacent points. These settings can be adjusted to
+reduce computational time or to increase upon the accuracy.
+
+
+
 Self-consistent field matrices
 ------------------------------
 

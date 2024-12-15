@@ -82,8 +82,8 @@ print(pydft.__version__)
 from pydft import MoleculeBuilder, DFT
 
 CO = MoleculeBuilder().get_molecule("CO")
-dft = DFT(CO, basis='sto3g', verbose=True)
-en = dft.scf(1e-4)
+dft = DFT(CO, basis='sto3g')
+en = dft.scf(1e-4, verbose=True)
 print("Total electronic energy: %f Ht" % en)
 ```
 

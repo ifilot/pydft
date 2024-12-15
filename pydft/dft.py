@@ -21,7 +21,7 @@ class DFT():
                  lmax:int = 8,
                  fdpts:int=7,
                  normalize:bool = True,
-                 parallel:bool = True):
+                 parallel:bool = False):
         """
         Constructs the DFT class
 
@@ -47,7 +47,7 @@ class DFT():
         verbose : bool, optional
             whether to provide verbose output, by default False
         parallel : bool, optional
-            whether to use multiprocessing features, by default False
+            whether to use multiprocessing features (only for Linux), by default False
         """
         self.__mol = mol
         self.__integrator = PyQInt()
