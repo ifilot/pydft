@@ -1,0 +1,179 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PyDFT: pure-python density functional theory &mdash; PyDFT  documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=e59714d7" />
+      <link rel="stylesheet" type="text/css" href="_static/css/custom.css?v=98152c0f" />
+      <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.1.1/css/all.min.css" />
+
+  
+    <link rel="shortcut icon" href="_static/favicon.ico"/>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=5929fcd5"></script>
+      <script src="_static/doctools.js?v=9bcbadda"></script>
+      <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Installation" href="installation.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            PyDFT
+              <img src="_static/pydft_128px.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background</a></li>
+<li class="toctree-l1"><a class="reference internal" href="user_interface.html">User Interface</a></li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="community_guidelines.html">Community guidelines</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">PyDFT</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div style="text-align: right;">
+<a href="https://github.com/ifilot/pydft" target="_blank"><i class="fa-brands fa-github"></i> Github</a>
+</div>
+<hr>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="pydft-pure-python-density-functional-theory">
+<h1>PyDFT: pure-python density functional theory<a class="headerlink" href="#pydft-pure-python-density-functional-theory" title="Link to this heading"></a></h1>
+<a class="reference external image-reference" href="https://anaconda.org/ifilot/pydft"><img alt="https://anaconda.org/ifilot/pydft/badges/version.svg" src="https://anaconda.org/ifilot/pydft/badges/version.svg" />
+</a>
+<a class="reference external image-reference" href="https://pypi.org/project/pydft/"><img alt="https://img.shields.io/pypi/v/pydft?color=green" src="https://img.shields.io/pypi/v/pydft?color=green" />
+</a>
+<a class="reference external image-reference" href="https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml"><img alt="https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml/badge.svg" src="https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml/badge.svg" />
+</a>
+<a class="reference external image-reference" href="https://github.com/ifilot/pydft/actions/workflows/build_conda.yml"><img alt="https://github.com/ifilot/pydft/actions/workflows/build_conda.yml/badge.svg" src="https://github.com/ifilot/pydft/actions/workflows/build_conda.yml/badge.svg" />
+</a>
+<a class="reference external image-reference" href="https://www.gnu.org/licenses/gpl-3.0"><img alt="https://img.shields.io/badge/License-GPLv3-blue.svg" src="https://img.shields.io/badge/License-GPLv3-blue.svg" />
+</a>
+<p><strong class="program">PyDFT</strong> is a pure-Python package for performing localized-orbital DFT
+calculations using Gaussian Type Orbitals.</p>
+<img alt="_images/pydft_logo_full_512px.png" src="_images/pydft_logo_full_512px.png" />
+<p><strong class="program">PyDFT</strong> currently supports LDA and PBE
+exchange-correlation functionals. The purpose of <strong class="program">PyDFT</strong> is mainly to
+serve as an educational tool to explain the inner workings of a DFT
+calculation. This program is not intended for professional calculations. It is
+not particularly fast nor offers a lot of features that more mature
+open-source of commercial packages offer. It does offer a unique insight into
+a working code and a considerable effort was made in documenting everything.</p>
+<div class="admonition tip">
+<p class="admonition-title">Tip</p>
+<p>More information on the inner workings of <strong class="program">PyDFT</strong> can be obtained
+from the textbook “Elements of Electronic Structure Theory” (specifically
+chapter 4), which is freely available <a class="reference external" href="https://ifilot.pages.tue.nl/elements-of-electronic-structure-theory/">via this website</a>.</p>
+</div>
+<p><strong class="program">PyDFT</strong> has been developed at the Eindhoven University of Technology,
+Netherlands. <strong class="program">PyDFT</strong> and its development are hosted on <a class="reference external" href="https://www.github.com/ifilot/pydft">Github</a>.  Bugs and feature requests are ideally
+submitted via the <a class="reference external" href="https://www.github.com/ifilot/pydft/issues">github issue tracker</a>.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Contents:</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#anaconda">Anaconda</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#pypi">PyPi</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#testing">Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#simple-calculation">Simple calculation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="background.html">Background</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="background.html#molecular-decomposition">Molecular decomposition</a></li>
+<li class="toctree-l2"><a class="reference internal" href="background.html#hartree-potential">Hartree potential</a></li>
+<li class="toctree-l2"><a class="reference internal" href="background.html#exchange-correlation-functions">Exchange-correlation functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="user_interface.html">User Interface</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="user_interface.html#building-molecules">Building molecules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_interface.html#calculating-electronic-energy">Calculating electronic energy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_interface.html#electron-density-and-its-gradient">Electron density and its gradient</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_interface.html#adjusting-grid-and-discretization-schemes">Adjusting grid and discretization schemes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_interface.html#self-consistent-field-matrices">Self-consistent field matrices</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_interface.html#kohn-sham-orbitals-and-their-visualization">Kohn-Sham orbitals and their visualization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_interface.html#analyzing-the-becke-grid">Analyzing the Becke grid</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_interface.html#hartree-potential">Hartree potential</a></li>
+<li class="toctree-l2"><a class="reference internal" href="user_interface.html#exchange-correlation-functional">Exchange-correlation functional</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api.html">API</a></li>
+<li class="toctree-l1"><a class="reference internal" href="community_guidelines.html">Community guidelines</a></li>
+</ul>
+</div>
+<section id="indices-and-tables">
+<h2>Indices and tables<a class="headerlink" href="#indices-and-tables" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="genindex.html"><span class="std std-ref">Index</span></a></p></li>
+<li><p><a class="reference internal" href="search.html"><span class="std std-ref">Search Page</span></a></p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2021, Inorganic Materials and Catalysis.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
