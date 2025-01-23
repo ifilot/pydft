@@ -8,7 +8,7 @@
 
 > [!NOTE]  
 > Python based Density Functional Theory code for educational purposes. The
-> documentation of PyDFT can be found [here](https://pydft.imc-tue.nl/).
+> documentation of PyDFT can be found [here](https://ifilot.github.io/pydft/).
 
 ## Purpose
 
