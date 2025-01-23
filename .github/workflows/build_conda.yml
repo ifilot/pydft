@@ -44,7 +44,7 @@ jobs:
           conda install -c conda-forge tqdm mendeleev pytest
           conda build . --output-folder conda-bld/
       - name: Archive packages
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: anaconda-packages
           path: conda-bld/noarch/*
