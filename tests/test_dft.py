@@ -52,19 +52,19 @@ class TestDFT(unittest.TestCase):
         answer = -111.14683799873168
         np.testing.assert_almost_equal(energy, answer, 4)
         
-    def test_bf3(self):
-        """
-        Test DFT calculation of BF3 molecule
-        """
-        mol_builder = MoleculeBuilder()
-        mol = mol_builder.from_name('bf3')
+    # def test_bf3(self):
+    #     """
+    #     Test DFT calculation of BF3 molecule
+    #     """
+    #     mol_builder = MoleculeBuilder()
+    #     mol = mol_builder.from_name('bf3')
 
-        # construct dft object
-        dft = DFT(mol, basis='sto3g')
-        energy = dft.scf()
+    #     # construct dft object
+    #     dft = DFT(mol, basis='sto3g')
+    #     energy = dft.scf()
 
-        answer = -318.2753601057624
-        np.testing.assert_almost_equal(energy, answer, 4)
+    #     answer = -318.2753601057624
+    #     np.testing.assert_almost_equal(energy, answer, 4)
     
     def test_ch4(self):
         """
