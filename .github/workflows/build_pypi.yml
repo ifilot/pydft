@@ -16,7 +16,7 @@ on:
 jobs:
   check-version-strings:
     name: Check version strings
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     container: python:3.11-slim-bullseye
 
     steps:
@@ -32,7 +32,7 @@ jobs:
   build-pip:
     name: Build pip
     needs: [check-version-strings]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     container: python:3.11-slim-bullseye
 
     steps:
@@ -55,7 +55,7 @@ jobs:
   test-pip:
     name: Perform unit testing
     needs: [build-pip]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     container: python:3.11-slim-bullseye
 
     steps:
@@ -77,7 +77,7 @@ jobs:
   
   upload_pypi:
     needs: [build-pip, test-pip]
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     environment: pypi
     permissions:
       id-token: write
