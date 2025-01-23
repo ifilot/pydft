@@ -69,7 +69,7 @@ class MolecularGrid:
         if self.__is_initialized:
             return
 
-        self.__build_molecular_grid(self.__enable_parallel)
+        self.__build_molecular_grid()
         self.__build_amplitudes()
         self.__is_initialized = True
 
@@ -736,7 +736,7 @@ class MolecularGrid:
             
         return mweights
 
-    def __build_molecular_grid(self, build_parallel=False):
+    def __build_molecular_grid(self):
         """
         Build the molecular grid from the atomic grids
         """
@@ -851,7 +851,7 @@ class MolecularGrid:
         
         # perform parallellized calculation of spherical harmonics; this 
         # unfortunately only works on Linux
-        if build_parallel and platform.system() != "Windows":
+        if self.__enable_parallel and platform.system() != "Windows":
             atoms = list(range(len(self.__atoms)))
             inputs = zip([self.__theta_gridpoints[i,:] for i in atoms], 
                          [self.__phi_gridpoints[i,:] for i in atoms])

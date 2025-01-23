@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from scipy.special import sph_harm
+from scipy.special import sph_harm_y
 import numpy as np
 
 def spherical_harmonic(l, m, theta, phi):
@@ -13,11 +13,11 @@ def spherical_harmonic(l, m, theta, phi):
     phi:   polar angle in radians
     """
     if m < 0:
-        val = np.sqrt(2) * np.imag(sph_harm(np.abs(m), l, theta, phi))
+        val = np.sqrt(2) * np.imag(sph_harm_y(np.abs(m), l, theta, phi))
     elif m > 0:
-        val = np.sqrt(2) * np.real(sph_harm(m, l, theta, phi))
+        val = np.sqrt(2) * np.real(sph_harm_y(m, l, theta, phi))
     else:
-        val = np.real(sph_harm(m, l, theta, phi))
+        val = np.real(sph_harm_y(m, l, theta, phi))
     
     return val
 
