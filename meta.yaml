@@ -1,6 +1,6 @@
 package:
   name: "pydft"
-  version: "0.7.1"
+  version: "0.7.2"
 
 source:
   path: .
@@ -20,7 +20,7 @@ requirements:
 
   run:
     - python>=3.9
-    - scipy
+    - scipy>=1.15
     - numpy
     - conda-forge::mendeleev
     - ifilot::pyqint

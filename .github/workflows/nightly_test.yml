@@ -1,0 +1,72 @@
+name: Nightly Test
+
+on:
+  workflow_dispatch:
+  pull_request:
+  push:
+    branches:
+      - master
+  schedule:
+    - cron: '0 */4 * * *'
+
+jobs:
+  check-version-strings:
+    name: Check version strings
+    runs-on: ubuntu-latest
+    container: python:3.12-slim-bookworm
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+      - name: Install dependencies
+        run: |
+          pip install pyyaml
+      - name: Test versions
+        run: |
+          python versiontest.py
+
+  build-pip:
+    name: Build pip
+    needs: [check-version-strings]
+    runs-on: ubuntu-latest
+    container: python:3.12-slim-bookworm
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build dependencies
+        run: |
+          pip install virtualenv
+          virtualenv venv
+          . venv/bin/activate
+          pip install build
+      - name: Build WHL
+        run: |
+          . venv/bin/activate
+          python -m build
+      - uses: actions/upload-artifact@v4
+        with:
+          path: ./dist/*.whl
+          name: whl
+  
+  test-pip:
+    name: Perform unit testing
+    needs: [build-pip]
+    runs-on: ubuntu-latest
+    container: python:3.12-slim-bookworm
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: whl
+          path: dist
+      - name: Install PyDFT
+        run: |
+          pip install virtualenv
+          virtualenv venv
+          . venv/bin/activate
+          pip install build pytest dist/*.whl
+      - name: Perform unit tests
+        run: |
+          . venv/bin/activate
+          python -m pytest tests/*.py --verbose
