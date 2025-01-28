@@ -13,7 +13,7 @@ jobs:
   check-version-strings:
     name: Check version strings
     runs-on: ubuntu-latest
-    container: python:3.14-slim-bullseye
+    container: python:3.13-slim-bookworm
 
     steps:
       - name: Checkout repo
@@ -29,7 +29,7 @@ jobs:
     name: Build pip
     needs: [check-version-strings]
     runs-on: ubuntu-latest
-    container: python:3.11-slim-bullseye
+    container: python:3.13-slim-bookworm
 
     steps:
       - uses: actions/checkout@v4
@@ -52,7 +52,7 @@ jobs:
     name: Perform unit testing
     needs: [build-pip]
     runs-on: ubuntu-latest
-    container: python:3.11-slim-bullseye
+    container: python:3.13-slim-bookworm
 
     steps:
       - uses: actions/checkout@v4
