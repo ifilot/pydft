@@ -20,7 +20,7 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "scipy",
+    "scipy>=1.15",
     "numpy",
     "pyqint",
     "pylebedev",

@@ -20,7 +20,7 @@ requirements:
 
   run:
     - python>=3.9
-    - scipy
+    - scipy>=1.15
     - numpy
     - conda-forge::mendeleev
     - ifilot::pyqint

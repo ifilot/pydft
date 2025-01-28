@@ -13,11 +13,11 @@ def spherical_harmonic(l, m, theta, phi):
     phi:   polar angle in radians
     """
     if m < 0:
-        val = np.sqrt(2) * np.imag(sph_harm_y(np.abs(m), l, theta, phi))
+        val = np.sqrt(2) * np.imag(sph_harm_y(l, np.abs(m), phi, theta))
     elif m > 0:
-        val = np.sqrt(2) * np.real(sph_harm_y(m, l, theta, phi))
+        val = np.sqrt(2) * np.real(sph_harm_y(l, m, phi, theta))
     else:
-        val = np.real(sph_harm_y(m, l, theta, phi))
+        val = np.real(sph_harm_y(l, m, phi, theta))
     
     return val
 
@@ -31,7 +31,7 @@ def spherical_harmonic_cart(l, m, p):
     m:    magnetic quantum number
     p:    position three-vector on the unit sphere
     """
-    theta = np.arctan2(p[1], p[0])
-    phi = np.arccos(p[2])
+    theta = np.arctan2(p[1], p[0])  # azimuthal
+    phi = np.arccos(p[2])           # polar
 
     return spherical_harmonic(l, m, theta, phi)
