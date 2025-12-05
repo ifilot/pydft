@@ -7,7 +7,7 @@ import numpy as np
 sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from pydft import MoleculeBuilder, DFT
-from pyqint import cgf
+from pyqint import CGF
 
 class TestCustomBasisSet(unittest.TestCase):
         
@@ -20,13 +20,13 @@ class TestCustomBasisSet(unittest.TestCase):
 
         cgfs = []
         for n in mol.get_nuclei():
-            _cgf = cgf(n[0])
+            cgf = CGF(n[0])
 
-            _cgf.add_gto(0.154329, 3.425251, 0, 0, 0)
-            _cgf.add_gto(0.535328, 0.623914, 0, 0, 0)
-            _cgf.add_gto(0.444635, 0.168855, 0, 0, 0)
+            cgf.add_gto(0.154329, 3.425251, 0, 0, 0)
+            cgf.add_gto(0.535328, 0.623914, 0, 0, 0)
+            cgf.add_gto(0.444635, 0.168855, 0, 0, 0)
 
-            cgfs.append(_cgf)
+            cgfs.append(cgf)
 
         # construct dft object
         dft = DFT(mol, basis=cgfs)
