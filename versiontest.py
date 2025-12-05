@@ -8,12 +8,10 @@ ROOT = os.path.dirname(__file__)
 def main():
     version_projecttoml = get_version_projecttoml()
     version_versionpy = get_version_versionpy()
-    version_metayaml = get_version_metayaml()
     
     try:
         for i in range(0,3):
             assert version_projecttoml[i] == version_versionpy[i]
-            assert version_versionpy[i] == version_metayaml[i]
     except Exception as e:
         print(e)
         raise Exception('Invalid version strings encountered')

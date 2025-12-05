@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pydft"
-version = "0.7.3"
+version = "0.7.4"
 authors = [
   { name="Ivo Filot", email="ivo@ivofilot.nl" }
 ]
@@ -24,7 +24,6 @@ dependencies = [
     "numpy",
     "pyqint",
     "pylebedev",
-    "mendeleev",
 ]
 
 [tool.setuptools]
@@ -33,13 +32,6 @@ include-package-data = true
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["pydft*"]
-
-[tool.conda.environment]
-name = "demo"
-channels = [
-    "ifilot",
-    "conda-forge",
-]
 
 [project.urls]
 "Homepage" = "https://github.com/ifilot/pydft"
