@@ -2,7 +2,6 @@
 
 [![Nightly Testing](https://github.com/ifilot/pydft/actions/workflows/nightly_test.yml/badge.svg)](https://github.com/ifilot/pydft/actions/workflows/nightly_test.yml)
 [![build](https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml/badge.svg)](https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml)
-[![build](https://github.com/ifilot/pydft/actions/workflows/build_conda.yml/badge.svg)](https://github.com/ifilot/pydft/actions/workflows/build_conda.yml)
 [![Anaconda-Server Badge](https://anaconda.org/ifilot/pydft/badges/version.svg)](https://anaconda.org/ifilot/pydft)
 [![PyPI](https://img.shields.io/pypi/v/pydft?color=green)](https://pypi.org/project/pydft/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
@@ -62,10 +61,10 @@ and can be readily visualized using specific matrix visualization routines.
 ## Installation
 
 This code depends on a few other packages. To install this code and its
-dependencies, run the following one-liner from Anaconda prompt
+dependencies, run the following one-liner
 
 ```bash
-conda install -c ifilot pydft pyqint pylebedev pytessel
+pip install pydft pyqint pylebedev pytessel
 ```
 
 ## Usage

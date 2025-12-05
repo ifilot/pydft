@@ -1,14 +1,10 @@
 PyDFT: pure-python density functional theory
 ============================================
 
-.. image:: https://anaconda.org/ifilot/pydft/badges/version.svg
-   :target: https://anaconda.org/ifilot/pydft
 .. image:: https://img.shields.io/pypi/v/pydft?color=green
    :target: https://pypi.org/project/pydft/
 .. image:: https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml/badge.svg
    :target: https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml
-.. image:: https://github.com/ifilot/pydft/actions/workflows/build_conda.yml/badge.svg
-   :target: https://github.com/ifilot/pydft/actions/workflows/build_conda.yml
 .. image:: https://img.shields.io/badge/License-GPLv3-blue.svg
    :target: https://www.gnu.org/licenses/gpl-3.0
 
