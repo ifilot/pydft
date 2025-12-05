@@ -1,8 +1,6 @@
 # PyDFT
 
-[![Nightly Testing](https://github.com/ifilot/pydft/actions/workflows/nightly_test.yml/badge.svg)](https://github.com/ifilot/pydft/actions/workflows/nightly_test.yml)
 [![build](https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml/badge.svg)](https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml)
-[![Anaconda-Server Badge](https://anaconda.org/ifilot/pydft/badges/version.svg)](https://anaconda.org/ifilot/pydft)
 [![PyPI](https://img.shields.io/pypi/v/pydft?color=green)](https://pypi.org/project/pydft/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
