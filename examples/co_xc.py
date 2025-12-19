@@ -1,17 +1,12 @@
 # -*- coding: utf-8 -*-
 from pydft import MoleculeBuilder,DFT
 
-#
-# Example: Calculate total electronic energy for CO using different
-#          XC-functionals.
-#
+mol = MoleculeBuilder().from_name("CO")
 
-CO = MoleculeBuilder().from_name("CO")
-dft = DFT(CO, basis='sto3g', functional='svwn5')
-en = dft.scf(1e-4)
-print("Total electronic energy (SVWN5): %f Ht" % en)
+dft = DFT(mol, basis='sto3g', functional='svwn5')
+res = dft.scf(1e-4)
+print("Total electronic energy (SVWN5): %f Ht" % res['energy'])
 
-CO = MoleculeBuilder().from_name("CO")
-dft = DFT(CO, basis='sto3g', functional='pbe')
-en = dft.scf(1e-4)
-print("Total electronic energy (PBE): %f Ht" % en)
+dft = DFT(mol, basis='sto3g', functional='pbe')
+res = dft.scf(1e-4)
+print("Total electronic energy (PBE): %f Ht" % res['energy'])

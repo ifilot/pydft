@@ -1,16 +1,9 @@
 import matplotlib.pyplot as plt
 import numpy as np
-from mpl_toolkits.axes_grid1 import make_axes_locatable
-import os,sys
-
-# add a reference to load the module
-ROOT = os.path.dirname(__file__)
-sys.path.insert(1, os.path.join(ROOT, '..'))
-
+from mpl_toolkits.axes_grid import make_axes_locatable
 from pydft import MoleculeBuilder, DFT
 
-mol_builder = MoleculeBuilder()
-mol = mol_builder.from_name('co')
+mol = MoleculeBuilder().from_name('co')
 
 # construct dft object
 dft = DFT(mol, basis='sto3g')

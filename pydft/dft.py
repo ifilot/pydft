@@ -123,6 +123,7 @@ class DFT():
             "mol": self.__mol,
             "nuclei": self.__nuclei,
             "cgfs": self.__cgfs,
+            "nelec": self.__nelec,
 
             # core results
             "energy": self.__energies[-1],
@@ -388,6 +389,9 @@ class DFT():
             self.__cgfs = self.__basis
             self.__nuclei = self.__mol.get_nuclei()
         
+        # set number of electrons
+        self.__nelec = np.sum([nucleus[1] for nucleus in self.__nuclei])
+
         # build molecular grid
         self.__molgrid = MolecularGrid(self.__nuclei, 
                                        self.__cgfs, 
@@ -469,10 +473,9 @@ class DFT():
         """
         N = len(self.__cgfs)
         P = np.zeros_like(self.__S)
-        nelec = np.sum([nucleus[1] for nucleus in self.__nuclei])
         for i in range(0,N):
             for j in range(0,N):
-                for k in range(0,int(nelec/2)):
+                for k in range(0,int(self.__nelec//2)):
                     P[i,j] += 2.0 * self.__C[i,k] * self.__C[j,k]
                     
         return P
