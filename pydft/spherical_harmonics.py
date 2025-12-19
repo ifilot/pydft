@@ -2,6 +2,8 @@
 
 from scipy.special import sph_harm_y
 import numpy as np
+from scipy.special import lpmv
+from math import factorial, pi
 
 class SphericalHarmonicsCache:
     """
@@ -111,5 +113,30 @@ def real_sph_harm_l_scipy(l, theta, phi):
         Yc = sph_harm_y(l, m, phi, theta)
         Y[l + m, :] = np.sqrt(2) * Yc.real
         Y[l - m, :] = np.sqrt(2) * Yc.imag
+
+    return Y
+
+def real_sph_harm_l_legendre(l, theta, phi):
+    """
+    Real spherical harmonics matching your sph_harm_y-based definition,
+    but computed via associated Legendre polynomials.
+    """
+    theta = np.asarray(theta)
+    phi = np.asarray(phi)
+
+    x = np.cos(phi)
+    npts = theta.size
+    Y = np.empty((2*l + 1, npts))
+
+    for m in range(0, l + 1):
+        P = lpmv(m, l, x)
+
+        norm = np.sqrt((2*l + 1) / (4*pi) * factorial(l - m) / factorial(l + m))
+
+        if m == 0:
+            Y[l, :] = norm * P
+        else:
+            Y[l + m, :] = np.sqrt(2) * norm * P * np.cos(m * theta)
+            Y[l - m, :] = np.sqrt(2) * norm * P * np.sin(m * theta)
 
     return Y

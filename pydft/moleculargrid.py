@@ -3,7 +3,7 @@
 import numpy as np
 from .atomicgrid import AtomicGrid
 from . import bragg_slater
-from .spherical_harmonics import real_sph_harm_l_scipy
+from .spherical_harmonics import real_sph_harm_l_legendre
 from pyqint import PyQInt
 import pyqint as pq
 import time
@@ -864,7 +864,7 @@ class MolecularGrid:
         phi   = self.__phi_gridpoints[atidx, :]
 
         blocks = [
-            real_sph_harm_l_scipy(l, theta, phi)
+            real_sph_harm_l_legendre(l, theta, phi)
             for l in range(self.__lmax + 1)
         ]
 
