@@ -20,8 +20,7 @@ class DFT():
                  nangpts:int = 110,
                  lmax:int = 8,
                  fdpts:int=7,
-                 normalize:bool = True,
-                 parallel:bool = False):
+                 normalize:bool = True):
         """
         Constructs the DFT class
 
@@ -46,8 +45,6 @@ class DFT():
             density
         verbose : bool, optional
             whether to provide verbose output, by default False
-        parallel : bool, optional
-            whether to use multiprocessing features (only for Linux), by default False
         """
         self.__mol = mol
         self.__integrator = PyQInt()
@@ -60,7 +57,6 @@ class DFT():
         self.__lmax = lmax
         self.__functional = functional
         self.__normalize = normalize
-        self.__parallel = parallel
         
         # keep track of time
         self.calctimes = {
@@ -71,57 +67,96 @@ class DFT():
 
     def get_data(self) -> dict:
         """
-        Get relevant memory objects, only valid after successful SCF calculation
+        Return results of the SCF calculation.
+
+        This method is only valid after a successful SCF run. It returns a
+        dictionary containing all relevant physical quantities, matrices,
+        energies, and timing information. The returned data layout is shared
+        between PyQInt and PyDFT calculations to ensure consistent
+        post-processing.
 
         Returns
         -------
         dict
-            Dictionary containing relevant memory objects (see below)
-            
+            Dictionary containing SCF results and metadata.
+
         Notes
         -----
-        The dictionary contains the following elements:
-        
-        * :code:`S`: overlap matrix
-        * :code:`T`: kinetic energy matrix
-        * :code:`V`: nuclear attraction matrix
-        * :code:`C`: coefficient matrix
-        * :code:`J`: Hartree matrix
-        * :code:`P`: density matrix
-        * :code:`XC`: exchange-correlation matrix
-        * :code:`F`: Fock-matrix
-        * :code:`Exc`: exchange-correlation energy
-        * :code:`Ex`: exchange energy
-        * :code:`Ec`: correlation energy
-        * :code:`energies`: all energies
-        * :code:`energy`: last energy
-        * :code:`orbc`: coeffient matrix (duplicate)
-        * :code:`orbe`: molecular orbital eigenvalues
-        * :code:`enucrep`: electrostatic repulsion of the nuclei
-        * :code:`timedata`: computation time for various parts of the calculation
-        
+        The returned dictionary contains the following entries:
+
+        **System information**
+            * ``mol`` : Molecular object defining geometry and atoms
+            * ``nuclei`` : Nuclear positions and charges
+            * ``cgfs`` : Contracted Gaussian basis functions
+
+        **Energies**
+            * ``energy`` : Final total electronic energy
+            * ``energies`` : SCF energy history
+            * ``ekin`` : Electronic kinetic energy
+            * ``enuc`` : Electron-nuclear attraction energy
+            * ``enucrep`` : Nuclear-nuclear repulsion energy
+            * ``ex`` : Exchange energy
+            * ``ec`` : Correlation energy
+            * ``exc`` : Exchange-correlation energy
+
+        **Orbital quantities**
+            * ``orbc`` : Molecular orbital coefficient matrix
+            * ``orbe`` : Molecular orbital eigenvalues
+
+        **Matrices and operators**
+            * ``overlap`` : Overlap matrix
+            * ``kinetic`` : Kinetic energy matrix
+            * ``nuclear`` : Nuclear attraction matrix
+            * ``hcore`` : Core Hamiltonian matrix (T + V)
+            * ``density`` : Density matrix
+            * ``fock`` : Fock matrix
+            * ``hartree`` : Hartree (Coulomb) matrix
+            * ``xc`` : Exchange-correlation matrix (DFT only, ``None`` for HF)
+
+        **Timing information**
+            * ``time_stats`` : Dictionary with timing breakdowns
+                - ``construct`` : Grid and setup construction times
+                - ``scf`` : SCF iteration timings
         """
         data = {
-            'S' : self.__S,         # overlap matrix
-            'T' : self.__T,         # kinetic energy matrix
-            'V' : self.__V,         # nuclear attraction matrix
-            'C' : self.__C,         # coefficient matrix
-            'J' : self.__J,         # Hartree matrix
-            'P' : self.__P,         # density matrix
-            'XC' : self.__XC,       # exchange-correlation matrix
-            'F' : self.__F,         # Fock-matrix
-            'Exc': self.__Exc,      # exchange-correlation energy
-            'Ex': self.__Ex,        # exchange energy
-            'Ec': self.__Ec,        # correlation energy
-            'energies': self.__energies, # all energy
-            'energy': self.__energies[-1], # last energy
-            'orbc': self.__C,       # coeffient matrix (duplicate)
-            'orbe': self.__e,       # molecular orbital eigenvalues
-            'enucrep': self.__enuc, # electrostatic repulsion of the nuclei
-            
-            # also output computation times
-            'timedata': {'construct_times': self.__molgrid.construct_times,
-                         'calc_times': self.calctimes},
+            # system
+            "mol": self.__mol,
+            "nuclei": self.__nuclei,
+            "cgfs": self.__cgfs,
+
+            # core results
+            "energy": self.__energies[-1],
+            "energies": self.__energies,
+
+            # orbital information
+            "orbc": self.__C,        # MO coefficients
+            "orbe": self.__e,        # MO eigenvalues
+
+            # density & operators
+            "density": self.__P,
+            "fock": self.__F,
+            "overlap": self.__S,
+            "kinetic": self.__T,
+            "nuclear": self.__V,
+            "hcore": self.__T + self.__V,
+
+            # electron interaction terms
+            "hartree": self.__J,
+            "xc": self.__XC,
+
+            # energies (explicit)
+            "ex": self.__Ex,
+            "ec": self.__Ec,
+            "exc": self.__Exc,
+            "enucrep": self.__enuc,
+            "ekin": np.einsum("ij,ji", self.__T, self.__P),
+            "enuc": np.einsum("ij,ji", self.__V, self.__P),
+
+            # timing
+            "time_stats": {
+                "construct": self.__molgrid.construct_times,
+                "scf": self.calctimes,
+            }
         }
         
         return data
@@ -173,7 +208,7 @@ class DFT():
 
         return self.__molgrid.get_gradient_at_points(spoints, self.__P)
     
-    def scf(self, tol:float=1e-5, verbose:bool=False) -> float:
+    def scf(self, tol:float=1e-5, verbose:bool=False) -> dict:
         """
         Perform the self-consistent field procedure
 
@@ -226,7 +261,7 @@ class DFT():
                         self.__P = self.__calculate_P()
                     break
 
-        return energy
+        return self.get_data()
     
     def print_time_statistics(self):
         """
@@ -360,8 +395,7 @@ class DFT():
                                        nangpts=self.__nangpts,
                                        lmax=self.__lmax,
                                        fdpts=self.__fdpts,
-                                       functional=self.__functional,
-                                       parallel=self.__parallel)
+                                       functional=self.__functional)
         self.__molgrid.initialize() # molecular grid uses late initialization
 
         # build one-electron matrices; because these matrices are Hermetian,

@@ -14,6 +14,6 @@ from pydft import MoleculeBuilder, DFT
 
 CO = MoleculeBuilder().from_name("CO")
 dft = DFT(CO, basis='sto3g')
-en = dft.scf(1e-4, verbose=True)
-print("Total electronic energy: %f Ht" % en)
+res = dft.scf(1e-4, verbose=True)
+print("Total electronic energy: %f Ht" % res['energy'])
 dft.print_time_statistics()

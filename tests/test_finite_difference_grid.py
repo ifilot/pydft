@@ -30,9 +30,9 @@ class TestFiniteDifferenceSchemes(unittest.TestCase):
 
         for fdpts,answer in zip([3,5,7,9,11,13], answers):
             dft = DFT(mol, basis='sto3g', fdpts=fdpts)
-            energy = dft.scf()
+            res = dft.scf()
 
-            np.testing.assert_almost_equal(energy, answer, 4)
+            np.testing.assert_almost_equal(res['energy'], answer, 4)
 
 if __name__ == '__main__':
     unittest.main()

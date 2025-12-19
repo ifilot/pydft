@@ -30,10 +30,10 @@ class TestCustomBasisSet(unittest.TestCase):
 
         # construct dft object
         dft = DFT(mol, basis=cgfs)
-        energy = dft.scf()
+        res = dft.scf()
 
         answer = -1.1570136
-        np.testing.assert_almost_equal(energy, answer, 4)
+        np.testing.assert_almost_equal(res['energy'], answer, 4)
 
 if __name__ == '__main__':
     unittest.main()

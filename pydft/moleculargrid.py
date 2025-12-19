@@ -17,8 +17,7 @@ class MolecularGrid:
                  nangpts:int=110, 
                  lmax:int=8,
                  fdpts:int=7,
-                 functional:str='svwn5',
-                 parallel:bool=False):
+                 functional:str='svwn5'):
         """
         Construct MolecularGrid
 
@@ -38,8 +37,6 @@ class MolecularGrid:
             number of grid point in finite difference scheme, by default 7
         functional : str, optional
             exchange-correlation functional, by default 'svwn5'
-        parallel : bool, optional
-             whether to use multiprocessing features, by default False
         """
         # keep track of build times
         self.construct_times = {}
@@ -54,7 +51,6 @@ class MolecularGrid:
         self.__basis = cgfs
         self.__functionals = Functionals(functional)
         self.__is_initialized = False
-        self.__enable_parallel = parallel
     
     def initialize(self):
         """
