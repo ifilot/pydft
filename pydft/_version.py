@@ -1,1 +1,6 @@
-__version__ = '0.7.4'
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("pymodia")
+except PackageNotFoundError:
+    __version__ = "0.0.0"  # optional fallback

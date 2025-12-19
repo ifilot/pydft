@@ -242,7 +242,7 @@ class DFT():
         print()
         print('-- Calculation times --')
         print('Classical e-e repulsion matrix (J):          %.4f s' % np.average(self.calctimes['calculate_J']))
-        print('Electron density and Hartree potential (U):  %.4f s' % np.average(self.calctimes['density_hartree']))
+        print('Building edens (rho) and Hartree pot (U):    %.4f s' % np.average(self.calctimes['density_hartree']))
         print('Exchange-correlation matrices (XC):          %.4f s' % np.average(self.calctimes['calculate_XC']))
     
     def get_construction_times(self) -> dict:

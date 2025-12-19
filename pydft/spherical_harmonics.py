@@ -88,7 +88,9 @@ def spherical_harmonic_cart(l, m, p):
 def real_sph_harm_l_scipy(l, theta, phi):
     """
     Evaluate real Spherical Harmonics for all m-values corresponding to a single
-    l-value.
+    l-value. This function is faster than looping over `spherical_harmonic`, yet
+    remains slower than `real_sph_harm_l_legendre`, which is the preferred
+    function for this task.
 
     Parameters
     ----------
@@ -119,7 +121,17 @@ def real_sph_harm_l_scipy(l, theta, phi):
 def real_sph_harm_l_legendre(l, theta, phi):
     """
     Real spherical harmonics matching your sph_harm_y-based definition,
-    but computed via associated Legendre polynomials.
+    but computed via associated Legendre polynomials. This function seems
+    to perform best.
+
+    Parameters
+    ----------
+    l : int
+        Angular momentum quantum number
+    theta : array_like
+        Azimuthal angles
+    phi : array_like
+        Polar angles
     """
     theta = np.asarray(theta)
     phi = np.asarray(phi)

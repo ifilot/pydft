@@ -4,7 +4,7 @@ import numpy as np
 from scipy.interpolate import CubicSpline
 from . import bragg_slater
 from .angulargrid import AngularGrid
-from .spherical_harmonics import spherical_harmonic, SphericalHarmonicsCache
+from .spherical_harmonics import SphericalHarmonicsCache
 import math
 
 class AtomicGrid:
