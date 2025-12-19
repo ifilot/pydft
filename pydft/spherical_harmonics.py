@@ -3,6 +3,53 @@
 from scipy.special import sph_harm_y
 import numpy as np
 
+class SphericalHarmonics:
+    """
+    Smart cache for real spherical harmonics Y_lm(theta, phi)
+    """
+
+    _cache = {}  # (l, angpts_key) -> (2*l+1, npts)
+
+    @staticmethod
+    def _angpts_key(angpts):
+        return tuple(tuple(p) for p in angpts)
+
+    @classmethod
+    def get_l(cls, l, angpts):
+        """
+        Return Y_lm for fixed l and all m in [-l, l]
+        Shape: (2*l+1, npts)
+        """
+        key = (l, cls._angpts_key(angpts))
+
+        if key in cls._cache:
+            return cls._cache[key]
+
+        npts = len(angpts)
+        Yl = np.zeros((2*l + 1, npts))
+
+        for i, m in enumerate(range(-l, l + 1)):
+            Yl[i, :] = [
+                spherical_harmonic(l, m, theta, phi)
+                for theta, phi in angpts
+            ]
+
+        cls._cache[key] = Yl
+        return Yl
+
+    @classmethod
+    def get_ylm(cls, lmax, angpts):
+        """
+        Return stacked Y_lm for l = 0..lmax
+        Shape: ((lmax+1)^2, npts)
+        """
+        blocks = [cls.get_l(l, angpts) for l in range(lmax + 1)]
+        return np.vstack(blocks)
+
+    @classmethod
+    def clear_cache(cls):
+        cls._cache.clear()
+
 def spherical_harmonic(l, m, theta, phi):
     """
     Calculate value of spherical harmonic function

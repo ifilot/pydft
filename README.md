@@ -20,7 +20,7 @@ packages offer. It **does** offer a unique insight into a working code and a
 considerable effort was made in documenting everything.
 
 > [!TIP]  
-> Interested in other **education** quantum chemical codes? Have a look at the
+> Interested in other **educational** quantum chemical codes? Have a look at the
 > packages below.
 > * [PyQInt](https://github.com/ifilot/pyqint) is a hybrid C++/Python (Cython)
 >   code for performing Hartree-Fock calculations. This code contains many
