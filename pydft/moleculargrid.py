@@ -3,14 +3,11 @@
 import numpy as np
 from .atomicgrid import AtomicGrid
 from . import bragg_slater
-from .spherical_harmonics import spherical_harmonic
+from .spherical_harmonics import real_sph_harm_l_scipy
 from pyqint import PyQInt
 import pyqint as pq
 import time
-import multiprocessing
 from .xcfunctionals import Functionals
-from functools import partial
-import platform
 
 class MolecularGrid:
     def __init__(self, 
@@ -828,10 +825,12 @@ class MolecularGrid:
             self.__rgridpoints[i,:] = np.sqrt(xyz)
         
         # build unit sphere angles
-        self.__theta_gridpoints = np.arctan2(self.__ygridpoints,
+        st = time.time()
+        self.__theta_gridpoints = np.arctan2(self.__ygridpoints,        # azimuthal
                                              self.__xgridpoints)
-        self.__phi_gridpoints = np.arccos(np.divide(self.__zgridpoints,
+        self.__phi_gridpoints = np.arccos(np.divide(self.__zgridpoints, # polar
                                                     self.__rgridpoints))
+        self.construct_times['cartesian_solid_angle_projection'] = time.time() - st
 
         # calculate the nuclear potential at each grid point due to the other nuclei            
         self.__rigridpoints = np.divide(1.0, self.__rgridpoints)
@@ -842,71 +841,34 @@ class MolecularGrid:
         self.construct_times['nuclear_distance_and_potential'] = time.time() - st
         
         # calculate values for the spherical harmonics for each grid point
-        # with respect to each atom as central point and for each value
+        # with respect to each atom as the central point and for each value
         # of l,m (thus a rank-3 tensor)
         st = time.time()
         self.__ylmgpts = np.ndarray((len(self.__atoms), 
                                          (self.__lmax+1)**2, 
-                                         np.prod(self.__mweights.shape)))
-        
-        # perform parallellized calculation of spherical harmonics; this 
-        # unfortunately only works on Linux
-        if self.__enable_parallel and platform.system() != "Windows":
-            atoms = list(range(len(self.__atoms)))
-            inputs = zip([self.__theta_gridpoints[i,:] for i in atoms], 
-                         [self.__phi_gridpoints[i,:] for i in atoms])
-            calculate_partial = partial(self.build_ylmgpts_atom, 
-                                        lmax=self.__lmax, 
-                                        npts=np.prod(self.__mweights.shape))
-            
-            # only parallellize over the atoms
-            ncpu = min(multiprocessing.cpu_count(), len(self.__atoms))
-            
-            with multiprocessing.Pool(processes=ncpu) as pool:
-                result = pool.map(calculate_partial, inputs)
-            for i,res in enumerate(result):
-                self.__ylmgpts[i,:,:] = res
-        else: # non-parallelized evaluation of spherical harmonics
-            for i,at in enumerate(self.__atoms):    # loop over atoms
-                self.__ylmgpts[i,:,:] = self.__build_ylmgpts_atom(i)
+                                         np.prod(self.__mweights.shape)))        
+        for i,at in enumerate(self.__atoms):    # loop over atoms
+            self.__ylmgpts[i,:,:] = self.__build_ylmgpts_atom(i)
         self.construct_times['spherical_harmonics'] = time.time() - st
                     
         # collect complete weights for the full molecular grid
         weights = np.array([an.get_weights() for an in self.__atomgrids]).flatten()
         self.__mgw = np.multiply(weights, self.__mweights.flatten())
-
-    @staticmethod
-    def build_ylmgpts_atom(Omega, lmax, npts):
-        """
-        Get the spherical harmonic parameters for a single atom
-        
-        This function is 'pickable' and can be used in a multiprocessing pool
-        """
-        lmctr = 0
-        theta = Omega[0]
-        phi = Omega[1]
-        res = np.ndarray(((lmax+1)**2, npts))
-        for l in range(0, lmax+1):   # loop over spherical harmonics
-            for m in range(-l, l+1):
-                res[lmctr,:] = spherical_harmonic(l, m, \
-                                                  theta, 
-                                                  phi)
-                lmctr += 1
-        return res
     
     def __build_ylmgpts_atom(self, atidx):
         """
-        Get the spherical harmonic parameters for a single atom
+        Get the real spherical harmonic values for a single atom
+        using vectorized evaluation per l.
         """
-        lmctr = 0
-        res = np.ndarray(((self.__lmax+1)**2, np.prod(self.__mweights.shape)))
-        for l in range(0, self.__lmax+1):   # loop over spherical harmonics
-            for m in range(-l, l+1):
-                res[lmctr,:] = spherical_harmonic(l, m, \
-                                                  self.__theta_gridpoints[atidx,:], 
-                                                  self.__phi_gridpoints[atidx,:])
-                lmctr += 1
-        return res
+        theta = self.__theta_gridpoints[atidx, :]
+        phi   = self.__phi_gridpoints[atidx, :]
+
+        blocks = [
+            real_sph_harm_l_scipy(l, theta, phi)
+            for l in range(self.__lmax + 1)
+        ]
+
+        return np.vstack(blocks)
 
     def __build_amplitudes(self):
         """

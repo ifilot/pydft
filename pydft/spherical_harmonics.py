@@ -3,7 +3,7 @@
 from scipy.special import sph_harm_y
 import numpy as np
 
-class SphericalHarmonics:
+class SphericalHarmonicsCache:
     """
     Smart cache for real spherical harmonics Y_lm(theta, phi)
     """
@@ -82,3 +82,34 @@ def spherical_harmonic_cart(l, m, p):
     phi = np.arccos(p[2])           # polar
 
     return spherical_harmonic(l, m, theta, phi)
+
+def real_sph_harm_l_scipy(l, theta, phi):
+    """
+    Evaluate real Spherical Harmonics for all m-values corresponding to a single
+    l-value.
+
+    Parameters
+    ----------
+    l : int
+        Angular momentum quantum number
+    theta : array_like
+        Azimuthal angles
+    phi : array_like
+        Polar angles
+    """
+    theta = np.asarray(theta)
+    phi = np.asarray(phi)
+
+    npts = theta.size
+    Y = np.zeros((2*l + 1, npts))
+
+    # m = 0
+    Y[l, :] = sph_harm_y(l, 0, phi, theta).real
+
+    # m > 0 and m < 0
+    for m in range(1, l + 1):
+        Yc = sph_harm_y(l, m, phi, theta)
+        Y[l + m, :] = np.sqrt(2) * Yc.real
+        Y[l - m, :] = np.sqrt(2) * Yc.imag
+
+    return Y

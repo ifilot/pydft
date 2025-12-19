@@ -4,7 +4,7 @@ import numpy as np
 from scipy.interpolate import CubicSpline
 from . import bragg_slater
 from .angulargrid import AngularGrid
-from .spherical_harmonics import spherical_harmonic
+from .spherical_harmonics import spherical_harmonic, SphericalHarmonicsCache
 import math
 
 class AtomicGrid:
@@ -381,15 +381,15 @@ class AtomicGrid:
     
     def __build_ylm(self):
         """
-        Calculate the value for spherical harmonics at the angular points
+        Build spherical harmonics values at the angular points, use caching if needed
         """
-        self.__ylm = np.zeros(((self.__lmax+1)**2, len(self.__angpts)))
-        lmctr = 0
-        for l in range(0, self.__lmax+1):
-            for m in range(-l, l+1):
-                ylm = [spherical_harmonic(l, m, p[0], p[1]) for p in self.__usangles]
-                self.__ylm[lmctr,:] = np.array(ylm)
-                lmctr += 1
+        self.__ylm = SphericalHarmonicsCache.get_ylm(self.__lmax, self.__usangles)
+
+    def get_ylm_atom(self):
+        """
+        Grab the spherical harmonic values at the angular points
+        """
+        return self.__ylm
     
     def __build_finite_difference_matrix(self, r, rm):
         """

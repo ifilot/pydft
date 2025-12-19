@@ -229,8 +229,12 @@ class DFT():
         return energy
     
     def print_time_statistics(self):
+        """
+        Print a summary of time statistics
+        """
         print('-- Construction times --')
         print('Atomic grids:                                %.4f s' % self.__molgrid.construct_times['atomic_grids'])
+        print('Projection cart. coord. on solid angles:     %.4f s' % self.__molgrid.construct_times['cartesian_solid_angle_projection'])
         print('Fuzzy cell decomposition:                    %.4f s' % self.__molgrid.construct_times['fuzzy_cell_decomposition'])
         print('Spherical harmonics:                         %.4f s' % self.__molgrid.construct_times['spherical_harmonics'])
         print('Nuclear distance and potential:              %.4f s' % self.__molgrid.construct_times['nuclear_distance_and_potential'])
