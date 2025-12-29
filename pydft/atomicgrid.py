@@ -1,14 +1,19 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from scipy.interpolate import CubicSpline
+from scipy.interpolate import CubicHermiteSpline
 from . import bragg_slater
 from .angulargrid import AngularGrid
 from .spherical_harmonics import SphericalHarmonicsCache
 import math
+from .stencil import stencil_interp
 
 class AtomicGrid:
-    def __init__(self, at, nshells:int=32, nangpts:int=110, lmax:int=8,
+    def __init__(self, 
+                 at, 
+                 nshells:int=32, 
+                 nangpts:int=110, 
+                 lmax:int=8,
                  fdpts:int=7):
         """
         Initialize the class
@@ -32,6 +37,7 @@ class AtomicGrid:
         # set coefficients and parameters
         self.__set_bragg_slater_radius()
         self.__build_chebychev_grid()
+        self.__build_spline_geometry()
         self.__lebedev_coeff = self.__load_lebedev_coefficients(nangpts)
         
         # store the positions of the angular points, their weights for the
@@ -101,12 +107,6 @@ class AtomicGrid:
         # harmonic coefficients that describe the Hartree potential (ulm)
         # in that radial shell
         self.__calculate_hartree_potential_coefficients()
-        
-        # build cubic interpolation
-        self.__ulm_splines = []
-        rr = np.flip(self.__rr)
-        for i in range((self.__lmax+1)**2):
-            self.__ulm_splines.append(CubicSpline(rr, np.flip(self.__ulm[:,i])))
 
     def get_ulm(self):
         """
@@ -126,18 +126,127 @@ class AtomicGrid:
         """
         return self.__ylm
 
-    def calculate_interpolated_ulm(self, rr):
+    def calculate_interpolated_ulm_at_points(self, rpoints):
         """
         Calculate interpolated Hartree potential expansion coefficients
         for all points r in the array rr
         """
-        ulmintp = np.zeros((len(self.__ulm_splines), len(rr)))
+        # build cubic interpolation
+        ulm_splines = []
+        rr = np.flip(self.__rr)
+        for i in range((self.__lmax+1)**2):
+            dydx = self.__finite_difference_derivative(rr, np.flip(self.__ulm[:,i]))
+            ulm_splines.append(CubicHermiteSpline(rr, np.flip(self.__ulm[:,i]), dydx))
+
+        ulmintp = np.zeros((len(ulm_splines), len(rr)))
                 
         # loop over lm pairs and interpolate value for Ulm at points rr
         for i in range((self.__lmax+1)**2):
-            ulmintp[i,:] = self.__ulm_splines[i](rr)
+            ulmintp[i,:] = ulm_splines[i](rpoints)
 
         return ulmintp
+
+    def calculate_interpolated_ulm_stencil(self):
+        """
+        Interpolate Ulm(r) from the radial grid to the fixed evaluation points
+        using a precomputed 4-point cubic stencil.
+
+        This is a hot-path routine:
+        - no spline objects are constructed
+        - no Python loops over grid points
+        - all heavy work is done in the compiled stencil_interp kernel
+
+        Returns
+        -------
+        out : ndarray, shape (Nchan, Neval)
+            Interpolated Ulm values for all angular channels and
+            all evaluation points.
+        """
+
+        # Reverse radial axis to match the convention used when
+        # building the stencil indices and weights.
+        #
+        # np.ascontiguousarray() is critical here:
+        #  - ensures row-major contiguous memory
+        #  - avoids slow strided access inside the compiled kernel
+        ulm_rev = np.ascontiguousarray(self.__ulm[::-1, :])
+
+        # Allocate output array:
+        #   Nchan = number of (l,m) channels
+        #   Neval = number of radial evaluation points
+        #
+        # Layout is (Nchan, Neval) to match the rest of the codebase.
+        out = np.empty(
+            (ulm_rev.shape[1], self._stencil_i.size),
+            dtype=ulm_rev.dtype
+        )
+
+        # Perform cubic stencil interpolation.
+        #
+        # stencil_interp is a compiled (Numba) kernel that computes:
+        #
+        #   out[c, p] = sum_k w[p, k] * ulm_rev[i[p] + k - 1, c]
+        #
+        # for all channels c and evaluation points p.
+        #
+        # This avoids all Python overhead and large temporary arrays.
+        stencil_interp(
+            ulm_rev,
+            self._stencil_i,
+            self._stencil_w,
+            out
+        )
+
+        return out
+
+    def build_cubic_stencil_evaluation(self, r_eval):
+        """
+        Precompute 4-point cubic Lagrange weights for fixed evaluation points r_eval
+        on the fixed grid self._spline_rr.
+
+        After this, interpolation is just 4 gathers + weighted sum.
+        """
+        x = self._spline_rr
+        r_eval = np.asarray(r_eval)
+
+        Nr = len(x)
+        if Nr < 4:
+            raise ValueError("Need at least 4 grid points for cubic stencil interpolation.")
+
+        # Interval index i such that x[i] <= r < x[i+1]
+        i = np.searchsorted(x, r_eval) - 1
+
+        # We need i-1, i, i+1, i+2 to be valid => i in [1, Nr-3]
+        i = np.clip(i, 1, Nr - 3)
+
+        x0 = x[i - 1]
+        x1 = x[i]
+        x2 = x[i + 1]
+        x3 = x[i + 2]
+        r  = r_eval
+
+        # Lagrange basis weights for nodes x0..x3 evaluated at r
+        # wj = Π_{m!=j} (r - xm) / (xj - xm)
+        w0 = ((r - x1) * (r - x2) * (r - x3)) / ((x0 - x1) * (x0 - x2) * (x0 - x3))
+        w1 = ((r - x0) * (r - x2) * (r - x3)) / ((x1 - x0) * (x1 - x2) * (x1 - x3))
+        w2 = ((r - x0) * (r - x1) * (r - x3)) / ((x2 - x0) * (x2 - x1) * (x2 - x3))
+        w3 = ((r - x0) * (r - x1) * (r - x2)) / ((x3 - x0) * (x3 - x1) * (x3 - x2))
+
+        self._stencil_i = i
+        self._stencil_w = np.stack([w0, w1, w2, w3], axis=1)  # shape (Neval, 4)
+
+    def __finite_difference_derivative(self, x, y):
+        dydx = np.empty_like(y)
+
+        # interior: central difference
+        dx = x[2:] - x[:-2]
+        dydx[1:-1] = (y[2:] - y[:-2]) / dx
+
+        # boundaries: one-sided
+        dydx[0]  = (y[1]  - y[0])  / (x[1]  - x[0])
+        dydx[-1] = (y[-1] - y[-2]) / (x[-1] - x[-2])
+
+        return dydx
 
     def set_molecular_weights(self, mweights):
         """
@@ -253,6 +362,44 @@ class AtomicGrid:
             Bragg-Slater radius
         """
         return self.__rm
+
+    def build_spline_evaluation(self, r_eval):
+        """
+        Precompute interval indices and dx powers
+        for spline evaluation on a fixed grid.
+
+        Must be called after __build_spline_geometry().
+        """
+        rr = self._spline_rr
+        r_eval = np.asarray(r_eval)
+
+        # Find interval indices
+        idx = np.searchsorted(rr, r_eval) - 1
+
+        # Clamp to valid spline intervals
+        idx = np.clip(idx, 0, len(rr) - 2)
+
+        # Local coordinate within interval
+        dx = r_eval - rr[idx]
+
+        # Store everything needed for fast evaluation
+        self._spline_idx = idx
+        self._spline_dx  = dx
+        self._spline_dx2 = dx * dx
+        self._spline_dx3 = self._spline_dx2 * dx
+
+    def __build_spline_geometry(self):
+        """
+        Initialize grid-dependent spline data.
+        Must be called once after self.__rr is known.
+        """
+        # Reverse grid once (since you already do this)
+        self._spline_rr = np.flip(self.__rr)
+        self._Nr = len(self._spline_rr)
+
+        # Dummy spline to initialize SciPy internals
+        dummy = np.zeros(self._Nr)
+        self._cs_template = CubicHermiteSpline(self._spline_rr, dummy, dummy)
 
     def __calculate_density_coefficients(self):
         """

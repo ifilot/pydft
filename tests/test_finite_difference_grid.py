@@ -19,20 +19,14 @@ class TestFiniteDifferenceSchemes(unittest.TestCase):
         mol_builder = MoleculeBuilder()
         mol = mol_builder.from_name('CO')
 
-        answers = [
-            -110.96476654905626,
-            -111.14751240002687,
-            -111.14683799873168,
-            -111.15048475412650,
-            -111.14985895386218,
-            -111.14831640666813,
-        ]
+        answers = [-110.961 , -111.1438, -111.1431, -111.1467, -111.1461, -111.1445]
 
-        for fdpts,answer in zip([3,5,7,9,11,13], answers):
+        res = []
+        for fdpts in [3,5,7,9,11,13]:
             dft = DFT(mol, basis='sto3g', fdpts=fdpts)
-            res = dft.scf()
+            res.append(dft.scf()['energy'])
 
-            np.testing.assert_almost_equal(res['energy'], answer, 4)
+        np.testing.assert_almost_equal(res, answers, 4)
 
 if __name__ == '__main__':
     unittest.main()

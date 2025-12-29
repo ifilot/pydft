@@ -2,7 +2,7 @@
 from pydft import MoleculeBuilder, DFT
 
 mol = MoleculeBuilder().from_name("benzene")
-dft = DFT(mol, basis='sto3g')
+dft = DFT(mol, basis='p631', nshells=64)
 res = dft.scf(1e-4, verbose=True)
 print("Total electronic energy: %f Ht" % res['energy'])
 dft.print_time_statistics()

@@ -32,7 +32,7 @@ class TestCustomBasisSet(unittest.TestCase):
         dft = DFT(mol, basis=cgfs)
         res = dft.scf()
 
-        answer = -1.1570136
+        answer = -1.1568407835459502
         np.testing.assert_almost_equal(res['energy'], answer, 4)
 
 if __name__ == '__main__':

@@ -63,6 +63,9 @@ class DFT():
             'density_hartree': [],
             'calculate_J': [],
             'calculate_XC': [],
+            'ulm_interpolation': [],
+            'build_hartree_field': [],
+            'build_repulsion_matrix': [],
         }
 
     def get_data(self) -> dict:
@@ -233,12 +236,12 @@ class DFT():
         nitfin = 0
         ediff = 0
         for niter in range(0, self.__itermax):
-            start = time.time()
+            start = time.perf_counter()
             energy = self.__iterate(niter, 
                                     giis=True if nitfin == 0 else False,
                                     mix=0.9)
             self.__energies.append(energy)
-            stop = time.time()
+            stop = time.perf_counter()
             itertime = stop - start
             self.__time_stats['iterations'].append(itertime)
             
@@ -275,9 +278,13 @@ class DFT():
         print('Spherical harmonics:                         %.4f s' % self.__molgrid.construct_times['spherical_harmonics'])
         print('Nuclear distance and potential:              %.4f s' % self.__molgrid.construct_times['nuclear_distance_and_potential'])
         print('Basis set amplitudes:                        %.4f s' % self.__molgrid.construct_times['basis_function_amplitudes'])
+        print('Spline construction:                         %.4f s' % self.__molgrid.construct_times['spline_construction'])
         print()
         print('-- Calculation times --')
         print('Classical e-e repulsion matrix (J):          %.4f s' % np.average(self.calctimes['calculate_J']))
+        print('  - Ulm interpolation:                       %.4f s' % np.average(self.calctimes['ulm_interpolation']))
+        print('  - Build Hartree-field:                     %.4f s' % np.average(self.calctimes['build_hartree_field']))
+        print('  - Build repulsion matrix:                  %.4f s' % np.average(self.calctimes['build_repulsion_matrix']))
         print('Building edens (rho) and Hartree pot (U):    %.4f s' % np.average(self.calctimes['density_hartree']))
         print('Exchange-correlation matrices (XC):          %.4f s' % np.average(self.calctimes['calculate_XC']))
     
@@ -313,17 +320,17 @@ class DFT():
         # calculate J and XC matrices based on the current electron
         # density estimate as captured in the density matrix P
         if np.any(self.__P):
-            st = time.time()
+            st = time.perf_counter()
             self.__molgrid.build_density(self.__P, normalize=self.__normalize)
-            self.calctimes['density_hartree'].append(time.time() - st)
+            self.calctimes['density_hartree'].append(time.perf_counter() - st)
             
-            st = time.time()
+            st = time.perf_counter()
             self.__J = self.__calculate_J()
-            self.calctimes['calculate_J'].append(time.time() - st)
+            self.calctimes['calculate_J'].append(time.perf_counter() - st)
             
-            st = time.time()
+            st = time.perf_counter()
             self.__XC, self.__Exc = self.__calculate_XC()
-            self.calctimes['calculate_XC'].append(time.time() - st)
+            self.calctimes['calculate_XC'].append(time.perf_counter() - st)
             
 
         # calculate Fock matrix
@@ -465,7 +472,12 @@ class DFT():
         Calculate the coulombic interaction matrix using the
         molecular grid
         """
-        return self.__molgrid.calculate_coulombic_matrix()
+        res, timestats = self.__molgrid.calculate_coulombic_matrix(True)
+        self.calctimes['ulm_interpolation'].append(timestats['ulm_interpolation'])
+        self.calctimes['build_hartree_field'].append(timestats['build_hartree_field'])
+        self.calctimes['build_repulsion_matrix'].append(timestats['build_repulsion_matrix'])
+
+        return res
     
     def __calculate_P(self):
         """

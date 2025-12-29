@@ -301,7 +301,7 @@ class MolecularGrid:
         # of the hartree potential for all the atoms
         ulmgpts = np.ndarray((len(self.__atoms), (self.__lmax+1)**2, len(self.__rgridpoints[0])))
         for i,at in enumerate(self.__atomgrids):
-            ulmgpts[i,:,:] = at.calculate_interpolated_ulm(self.__rgridpoints[i])
+            ulmgpts[i,:,:] = at.calculate_interpolated_ulm()
         
         # for each grid point determine the Hartree potential from the 
         # spherical harmonic coefficients with respect to each atomic center
@@ -326,7 +326,7 @@ class MolecularGrid:
         """
         return 0.5 * np.sum([at.calculate_coulomb_energy() for at in self.__atomgrids])
 
-    def calculate_coulombic_matrix(self) -> np.array:
+    def calculate_coulombic_matrix(self, calculate_timestats:bool=False) -> np.array:
         r"""
         Build the coulomb matrix :math:`\mathbf{J}`
 
@@ -335,28 +335,41 @@ class MolecularGrid:
         np.array
             Coulomb matrix :math:`\mathbf{J}`
         """
+        # always collect time statistics, but they are not always returned
+        timestats = {}
+
         # for each grid point, collect the spherical harmonic expansion coefficients
         # of the hartree potential for all the atoms
+        st = time.perf_counter()
         ulmgpts = np.ndarray((len(self.__atoms), (self.__lmax+1)**2, len(self.__rgridpoints[0])))
         for i,at in enumerate(self.__atomgrids):
-            ulmgpts[i,:,:] = at.calculate_interpolated_ulm(self.__rgridpoints[i])
+            ulmgpts[i,:,:] = at.calculate_interpolated_ulm_stencil()
+        timestats['ulm_interpolation'] = time.perf_counter() - st
         
         # for each grid point determine the Hartree potential from the 
         # spherical harmonic coefficients with respect to each atomic center
+        st = time.perf_counter()
         self.__ugpts = np.einsum('ijk,ik,ijk->k', ulmgpts, 
                                                   self.__rigridpoints, 
                                                   self.__ylmgpts,
                                                   optimize=True)
+        timestats['build_hartree_field'] = time.perf_counter() - st
         
         # construct coulombic repulsion matrix by integrating the interaction
         # of the hartree potential with the basis function amplitudes
+        st = time.perf_counter()
         J = np.einsum('k,ik,jk,k->ij', self.__ugpts, 
                                        self.__fullgrid_amplitudes,
                                        self.__fullgrid_amplitudes,
                                        self.__mgw,
                                        optimize=True)
+        timestats['build_repulsion_matrix'] = time.perf_counter() - st
         
-        return J
+        # only return timestats if requested, not all function request this
+        if calculate_timestats:
+            return J, timestats
+        else:
+            return J
         
     def calculate_dfa_kinetic(self) -> float:
         """
@@ -566,7 +579,7 @@ class MolecularGrid:
         for i,at in enumerate(self.__atomgrids):
             rgridpts = np.linalg.norm(pts - self.__atoms[i][0], axis=1)
             igpts = 1.0 / rgridpts
-            val = at.calculate_interpolated_ulm(rgridpts)
+            val = at.calculate_interpolated_ulm_at_points(rgridpts)
             for j in range(0, len(val)):
                 val[j,:] *= igpts
             ulmgpts += val
@@ -735,7 +748,7 @@ class MolecularGrid:
         """
         
         # build atomic grids
-        st = time.time()
+        st = time.perf_counter()
         self.__atomgrids = []
         for atom in self.__atoms:
             self.__atomgrids.append(AtomicGrid(atom, 
@@ -744,11 +757,11 @@ class MolecularGrid:
                                                self.__lmax,
                                                self.__fdpts)
                                     )
-        self.construct_times['atomic_grids'] = time.time() - st
+        self.construct_times['atomic_grids'] = time.perf_counter() - st
         
         # assign to each gridpoint in the atomic grid a weight in the molecular
         # grid
-        st = time.time()
+        st = time.perf_counter()
         self.__gridpoints = []
         self.__mweights = np.zeros((len(self.__atoms), 
                                     self.__nshells * int(self.__nangpts)))
@@ -797,11 +810,11 @@ class MolecularGrid:
         
             # and store the molecular weight functions into the atomic grids
             atgrid.set_molecular_weights(self.__mweights[g])
-        self.construct_times['fuzzy_cell_decomposition'] = time.time() - st
+        self.construct_times['fuzzy_cell_decomposition'] = time.perf_counter() - st
             
         # for each grid point in the molecular grid, store the distance to all the
         # nuclei in the grid
-        st = time.time()
+        st = time.perf_counter()
         self.__rgridpoints = np.zeros((len(self.__atoms), np.prod(self.__mweights.shape)))
         self.__xgridpoints = np.zeros_like(self.__rgridpoints)
         self.__ygridpoints = np.zeros_like(self.__rgridpoints)
@@ -819,14 +832,18 @@ class MolecularGrid:
                         np.power(self.__ygridpoints[i,:], 2))
             xyz = np.add(xy, np.power(self.__zgridpoints[i,:], 2))
             self.__rgridpoints[i,:] = np.sqrt(xyz)
+            
+            # build spline geometry once
+            self.__atomgrids[i].build_cubic_stencil_evaluation(self.__rgridpoints[i,:])
+        self.construct_times['spline_construction'] = time.perf_counter() - st
         
         # build unit sphere angles
-        st = time.time()
+        st = time.perf_counter()
         self.__theta_gridpoints = np.arctan2(self.__ygridpoints,        # azimuthal
                                              self.__xgridpoints)
         self.__phi_gridpoints = np.arccos(np.divide(self.__zgridpoints, # polar
                                                     self.__rgridpoints))
-        self.construct_times['cartesian_solid_angle_projection'] = time.time() - st
+        self.construct_times['cartesian_solid_angle_projection'] = time.perf_counter() - st
 
         # calculate the nuclear potential at each grid point due to the other nuclei            
         self.__rigridpoints = np.divide(1.0, self.__rgridpoints)
@@ -834,18 +851,18 @@ class MolecularGrid:
         self.__npot = np.einsum('i,ij->j',
                                 [-at[1] for at in self.__atoms], 
                                 self.__rigridpoints)
-        self.construct_times['nuclear_distance_and_potential'] = time.time() - st
+        self.construct_times['nuclear_distance_and_potential'] = time.perf_counter() - st
         
         # calculate values for the spherical harmonics for each grid point
         # with respect to each atom as the central point and for each value
         # of l,m (thus a rank-3 tensor)
-        st = time.time()
+        st = time.perf_counter()
         self.__ylmgpts = np.ndarray((len(self.__atoms), 
                                          (self.__lmax+1)**2, 
                                          np.prod(self.__mweights.shape)))        
         for i,at in enumerate(self.__atoms):    # loop over atoms
             self.__ylmgpts[i,:,:] = self.__build_ylmgpts_atom(i)
-        self.construct_times['spherical_harmonics'] = time.time() - st
+        self.construct_times['spherical_harmonics'] = time.perf_counter() - st
                     
         # collect complete weights for the full molecular grid
         weights = np.array([an.get_weights() for an in self.__atomgrids]).flatten()
@@ -874,7 +891,7 @@ class MolecularGrid:
         # calculate the amplitudes of the basis functions and store these
         # per atomic grid, per basis function and per points in the atomic
         # grid (i.e. in a rank-3 tensor)
-        st = time.time()
+        st = time.perf_counter()
         integrator = PyQInt()
         
         self.__amplitudes = np.ndarray((len(self.__atoms), len(self.__basis), len(self.__gridpoints[0])))
@@ -893,7 +910,7 @@ class MolecularGrid:
         self.__fullgrid_amplitudes = np.ndarray((len(self.__basis), np.prod(self.__mweights.shape)))        
         for i,cgf in enumerate(self.__basis):
             self.__fullgrid_amplitudes[i,:] = np.hstack([self.__amplitudes[a,i,:] for a in range(len(self.__atoms))])
-        self.construct_times['basis_function_amplitudes'] = time.time() - st
+        self.construct_times['basis_function_amplitudes'] = time.perf_counter() - st
 
     def __step(self, mu):
         """
