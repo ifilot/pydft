@@ -23,29 +23,37 @@ class DFT():
                  fdpts:int=7,
                  normalize:bool = True):
         """
-        Constructs the DFT class
+        Construct a density-functional theory (DFT) calculation object.
 
         Parameters
         ----------
         mol : Molecule
-            molecule
-        basis : str, optional
-            basis set, can be either a string or a list of cgf objects, by default 'sto3g'
+            Molecular system defining atoms, geometry, and total charge.
+        basis : str or list[CGF], optional
+            Atomic orbital basis set. This can be specified either as the name
+            of a built-in basis set or as an explicit list of contracted
+            Gaussian functions. The default is ``'sto3g'``.
         functional : str, optional
-            exchange-correlation function, valid options are :code:`swn5` 
-            and :code:`pbe`, by default 'svwn5'
-        nshells : int, optional
-            number of radial shells, by default 32
-        nangpts : int, optional
-            number of angular sampling points, by default 110
-        lmax : int, optional
-            maximum value of l in the spherical harmonic expansion, by default 8
-        fdpts: int, optional
-            number of grid point in finite difference scheme, by default 7
-        normalize: whether to perform intermediary normalization of the electron 
-            density
-        verbose : bool, optional
-            whether to provide verbose output, by default False
+            Exchange-correlation functional. Valid options are
+            :code:`svwn5` and :code:`pbe`. The default is ``'svwn5'``.
+        nshells : Mapping[str, int], optional
+            Number of radial integration shells per atomic species. If not
+            provided, default values are used based on the atomic row.
+        nangpts : Mapping[str, int], optional
+            Number of angular integration points per atomic species. The values
+            must correspond to supported Lebedev grid sizes. If not provided,
+            default values are used.
+        lmax : Mapping[str, int], optional
+            Maximum angular momentum quantum number per atomic species used in
+            the spherical harmonic expansion. If not provided, :code:`lmax` is
+            determined automatically from the number of angular points.
+        fdpts : int, optional
+            Number of grid points used in the finite-difference scheme. The
+            default is 7.
+        normalize : bool, optional
+            Whether to perform intermediate normalization of the electron
+            density during the self-consistent field procedure. The default
+            is ``True``.
         """
         self.__mol = mol
         self.__calculate_grid_settings(nshells, nangpts, lmax)

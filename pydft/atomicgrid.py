@@ -441,16 +441,16 @@ class AtomicGrid:
             [gridpoints.append(r * angpt + self.__cp) for angpt in self.__angpts]
         self.__gridpoints = np.array(gridpoints)
     
-    def __load_lebedev_coefficients(self, order:int):
+    def __load_lebedev_coefficients(self, nangpts:int):
         """
         Load Lebedev coefficients from data file and store these as a class
-        variable in a dictionary. Each set of angular points is stored as
-        a Nx4 matrix wherein the first three per row correspond to the
-        position on the unit sphere and the last row to the weight as used
-        in the Lebedev integration.
+        variable in a dictionary. Each set of angular points is stored as a Nx6
+        matrix wherein the first two columns correspond theta and phi, the
+        third-fifth column to the Cartesian coordinates on the unit sphere, and
+        the last column to the weight as used in the Lebedev integration.
         """
         ag = AngularGrid()
-        return ag.get_coefficients(order)
+        return ag.get_coefficients(nangpts)
     
     def __build_chebychev_grid(self):
         """
@@ -468,7 +468,7 @@ class AtomicGrid:
         """
         Build spherical harmonics values at the angular points, use caching if needed
         """
-        self.__ylm = SphericalHarmonicsCache.get_ylm(self.__lmax, self.__usangles)
+        self.__ylm = SphericalHarmonicsCache.get_ylm(self.__lmax, self.__nangpts)
 
     def get_ylm_atom(self):
         """
@@ -568,3 +568,7 @@ class AtomicGrid:
         Calculate square of first derivative of z-grid towards (regular) r-grid
         """
         return rm / (np.pi * np.pi * r * (rm + r) * (rm + r))
+
+def job_build_atomic_grid(args):
+    atom, nshells, nangpts, lmax, fdpts = args
+    return AtomicGrid(atom, nshells, nangpts, lmax, fdpts)

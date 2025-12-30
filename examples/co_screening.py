@@ -9,9 +9,8 @@ ROOT = os.path.dirname(__file__)
 energiesfile = os.path.join(ROOT, 'energies.txt')
 timefile = os.path.join(ROOT, 'timestats.txt')
 
-rshells = [8,16,32,64,128]
-ang = [6, 14, 26, 38, 50, 74, 86, 110, 146, 170, 194, 230, 266, 302, 350, 434, 
-    590, 770, 974]
+rshells = np.array([8,16,32,64,128])
+ang = np.array([6, 14, 26, 38, 50, 74, 86, 110, 146, 170, 194, 230, 266, 302, 350, 434, 590, 770, 974])
 
 if not os.path.exists(energiesfile) or not os.path.exists(timefile):
 
@@ -38,13 +37,14 @@ energies = np.loadtxt(energiesfile).reshape((len(rshells), len(ang)))
 timestats = np.loadtxt(timefile).reshape((len(rshells), len(ang)))
 
 plt.figure(dpi=144)
-nfit = 20
 for i,r in enumerate(rshells):
     (line,) = plt.loglog(ang, timestats[i], 'o', alpha=0.5, label=r'$N_{\text{shells}} = %i$' % r)
 
+    mask = (ang > 100) & (ang < 800)
+
     # Select last nfit points
-    x_fit = ang[-nfit:]
-    y_fit = timestats[i, -nfit:]
+    x_fit = ang[mask]
+    y_fit = timestats[i, mask]
 
     # Fit in log-log space
     logx = np.log10(x_fit)
@@ -52,7 +52,7 @@ for i,r in enumerate(rshells):
     slope, intercept = np.polyfit(logx, logy, 1)
 
     # Reconstruct fitted line in linear space
-    xx = np.linspace(100, 6000, 20)
+    xx = np.linspace(100, 800, 20)
     y_trend = 10**intercept * xx**slope
 
     color = line.get_color()
@@ -78,12 +78,12 @@ plt.close()
 plt.figure(dpi=144)
 ngridpts = np.outer(rshells, ang).flatten()
 times = timestats.flatten()
-mask = ngridpts > 100000
+mask = ngridpts > 2000
 plt.loglog(ngridpts, times, 'o', alpha=0.5, label='Data')
 logx = np.log10(ngridpts[mask])
 logy = np.log10(times[mask])
 slope, intercept = np.polyfit(logx, logy, 1)
-x_trend = np.linspace(10000, 1e6, 30)
+x_trend = np.linspace(1000, 1e5, 30)
 y_trend = 10**intercept * x_trend**slope
 plt.loglog(x_trend, y_trend, '--', alpha=0.9, color='black',
            label=r'Fit: $n \approx %.2f$' % slope)
@@ -105,4 +105,4 @@ plt.grid(linestyle='--')
 plt.legend()
 plt.tight_layout()
 plt.savefig(os.path.join(ROOT, 'co_energy_angplot.png'))
-plt.show()
+plt.close()

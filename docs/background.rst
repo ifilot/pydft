@@ -3,6 +3,9 @@
 Background
 ==========
 
+.. contents:: Table of Contents
+    :depth: 3
+
 :program:`PyDFT` is a pure-Python package for performing DFT calculations, 
 extending upon the functionality of `PyQInt <https://pyqint.imc-tue.nl/>`_
 and leveraging a number of other packages such as 

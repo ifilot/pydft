@@ -1,12 +1,16 @@
 # -*- coding: utf-8 -*-
 
 import numpy as np
-from .atomicgrid import AtomicGrid
-from .spherical_harmonics import real_sph_harm_l_legendre
 from pyqint import PyQInt, CGF
 import time
-from .xcfunctionals import Functionals
+
 from collections.abc import Mapping
+from concurrent.futures import ThreadPoolExecutor
+
+from .spherical_harmonics import SphericalHarmonicsCache
+from .xcfunctionals import Functionals
+from .atomicgrid import AtomicGrid, job_build_atomic_grid
+from .spherical_harmonics import job_compute_l
 from .data import BSRADII
 from .data import ATCHARGE
 
@@ -19,31 +23,40 @@ class MolecularGrid:
     def __init__(self, 
                  atoms:list[AtomEntry], 
                  cgfs:list[CGF], 
-                 nshells: Mapping[str, int] | None = None,
-                 nangpts: Mapping[str, int] | None = None,
+                 nshells: Mapping[str, int],
+                 nangpts: Mapping[str, int],
                  lmax: Mapping[str, int] | None = None,
                  fdpts:int=7,
                  functional:str='svwn5',
                  interpolation_method='CubicStencil'):
         """
-        Construct MolecularGrid
+        Construct a molecular integration grid.
 
         Parameters
         ----------
-        atoms : list
-            list of atoms and their charges
-        cgfs : list[pq.cgf]
-            list of contracted Gaussian functions (basis set)
-        nshells : int, optional
-            number of radial shells, by default 32
-        nangpts : int, optional
-            number of angular sampling points per shell, by default 110
-        lmax : int, optional
-            maximum value for l for projection of spherical harmonics, by default 8
-        fdpts: int, optional
-            number of grid point in finite difference scheme, by default 7
+        atoms : list[AtomEntry]
+            List of atoms defining the molecular geometry and nuclear charges.
+        cgfs : list[CGF]
+            List of contracted Gaussian functions defining the atomic orbital
+            basis set.
+        nshells : Mapping[str, int]
+            Number of radial integration shells per atomic species.
+        nangpts : Mapping[str, int]
+            Number of angular integration points per atomic species. The values
+            must correspond to supported Lebedev grid sizes.
+        lmax : Mapping[str, int], optional
+            Maximum angular momentum quantum number per atomic species used in
+            the spherical harmonic projection. If not provided, :code:`lmax` is
+            determined automatically from the number of angular points.
+        fdpts : int, optional
+            Number of grid points used in the finite-difference scheme. The
+            default is 7.
         functional : str, optional
-            exchange-correlation functional, by default 'svwn5'
+            Exchange-correlation functional used for grid-based quantities. The
+            default is ``'svwn5'``.
+        interpolation_method : str, optional
+            Interpolation method used for radial quantities. The default is
+            ``'CubicStencil'``.
         """
         # keep track of build times
         self.construct_times = {}
@@ -814,7 +827,21 @@ class MolecularGrid:
         """
         Build the molecular grid from the atomic grids
         """
-        
+        # build the cache in the SphericalHarmonicCache class
+        # many of the atoms use the same set of spherical harmonics evaluated
+        # at the same grid points; the SphericalHarmonicCache class ensures that
+        # these valued can be simply loaded in rather than being recomputed
+        # every time; internally, the SphericalHarmonicsCache class uses
+        # parallelization to calculate these spherical harmonic values
+        # efficiently
+        st = time.perf_counter()
+        requests = list({
+            (self.__lmax[atom[0]], self.__nangpts[atom[0]])
+            for atom in self.__atoms
+        })
+        SphericalHarmonicsCache.precache_bulk(requests)
+        self.construct_times['spherical_harmonic_cache'] = time.perf_counter() - st
+
         # build atomic grids
         st = time.perf_counter()
         self.__atomgrids = []
@@ -838,13 +865,13 @@ class MolecularGrid:
             grid = self.__gridpoints_per_atom[g]
             smats = np.ndarray((len(self.__atoms), len(self.__atoms), len(grid)))
             for i in range(0, len(self.__atoms)):
-                R1 = np.array(self.__atoms[i][1]) # position of atom 1
-                rm1 = BSRADII[self.__atoms[i][0]] # bragg-slater radius
+                R1 = np.array(self.__atoms[i][1])           # position of atom 1
+                rm1 = BSRADII[self.__atoms[i][0]]           # bragg-slater radius
                 for j in range(i+1, len(self.__atoms)):
-                    R2 = np.array(self.__atoms[j][1]) # position of atom 2
-                    rm2 = BSRADII[self.__atoms[j][0]] # bragg-slater radius
-                    Rij = np.linalg.norm(R1 - R2)  # distance between the two atoms
-                    chi = rm1 / rm2                # fraction of bragg-slater radii
+                    R2 = np.array(self.__atoms[j][1])       # position of atom 2
+                    rm2 = BSRADII[self.__atoms[j][0]]       # bragg-slater radius
+                    Rij = np.linalg.norm(R1 - R2)           # distance between the two atoms
+                    chi = rm1 / rm2                         # fraction of bragg-slater radii
                     
                     # calculate the confocal elliptical coordinate mu at the point r on the
                     # grid with respect to the two atoms
@@ -938,13 +965,26 @@ class MolecularGrid:
     
     def __build_ylmgpts_atom(self, atidx):
         """
-        Get the real spherical harmonic values for a single atom
-        using vectorized evaluation per l.
+        Precalculate the values for the spherical harmonics at the grid points for
+        each atom
         """
         theta = self.__theta_gridpoints[atidx, :]
         phi   = self.__phi_gridpoints[atidx, :]
+        lmax = self.__atomgrids[atidx].get_lmax()
 
-        return np.vstack([real_sph_harm_l_legendre(l, theta, phi) for l in range(self.__atomgrids[atidx].get_lmax()+1)])
+        # Construction of spherical harmonic functions is almost always faster
+        # when performed in parallel. The only exception is when the number of
+        # functions is so small that parallelization overhead dominates.
+        if lmax > 5:
+            with ThreadPoolExecutor() as ex:
+                results = list(ex.map(
+                    job_compute_l,
+                    [(l, theta, phi) for l in range(lmax + 1)]
+                ))
+        else:
+            results = [job_compute_l((l, theta, phi)) for l in range(lmax + 1)]
+
+        return np.vstack(results)
 
     def __build_amplitudes(self):
         """

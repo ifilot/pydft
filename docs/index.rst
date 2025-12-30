@@ -42,6 +42,11 @@ submitted via the `github issue tracker
    background
    building_molecules
    electronic_structure_calculations
+   orbital_visualization
+   becke_grid_analysis
+   hartree_potential_analysis
+   exchange_correlation_functional_analysis
+   benchmarks
    community_guidelines
 
 Indices and tables

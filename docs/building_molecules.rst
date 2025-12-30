@@ -3,6 +3,9 @@
 Building molecules
 ==================
 
+.. contents:: Table of Contents
+    :depth: 3
+
 Molecules can be built either directly using the :code:`Molecule` class or via
 a :code:`MoleculeBuilder` convenience routine. 
 
@@ -12,7 +15,7 @@ a :code:`MoleculeBuilder` convenience routine.
 	in :program:`PyDFT` but are obtained from the :program:`PyQInt` module.
 
 Molecule class
-##############
+--------------
 
 To manually build a molecule, one first need to construct a :code:`Molecule`
 object after which one or more atoms can be assigned to the molecule. If no
@@ -29,7 +32,7 @@ atomic units (i.e. Bohr units).
 	mol.add_atom('O', 0.0, 0.0, 1.2, unit='angstrom')
 
 MoleculeBuilder class
-#####################
+---------------------
 
 Alternatively, a Molecule can be constructed from the :code:`MoleculeBuilder` 
 class which uses a name. For more information about the :code:`MoleculeBuilder` 

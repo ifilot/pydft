@@ -1,5 +1,10 @@
-Calculating electronic energy
-=============================
+.. index:: electronic_structure_calculations
+
+Electronic Structure Calculations
+=================================
+
+.. contents:: Table of Contents
+    :depth: 3
 
 To start, we perform a high-level calculation of the electronic structure
 of the carbon-monoxide molecule using the PBE exchange-correlation functional.
@@ -84,6 +89,46 @@ between PyDFT and PyQInt to ensure a consistent interface across methods.
      - Dictionary containing timing information for construction and
        SCF iterations.
 
+Energy decomposition
+--------------------
+
+The molecular matrices can be used to perform a so-called energy decomposition,
+i.e., decompose the total electronic energy into the kinetic, nuclear attraction,
+electron-electron repulsion and exchange-correlation energy.
+
+.. literalinclude:: scripts/03-energy-decomposition.py
+	:language: python
+	:linenos:
+
+The above script yields the following output::
+
+	Total electronic energy:      -111.147096 Ht
+
+	Kinetic energy:                110.216045 Ht
+	Nuclear attraction:           -304.930390 Ht
+	Electron-electron repulsion:    75.597401 Ht
+	Exchange energy:               -12.055579 Ht
+	Correlation energy:             -1.232665 Ht
+	Exchange-correlation energy:   -13.288244 Ht
+	Nucleus-nucleus repulsion:      21.258092 Ht
+
+	Sum:  -111.147096 Ht
+
+Self-consistent field matrices
+------------------------------
+
+To obtain any of the matrices used in the self-consistent field procedure,
+we can invoke the :meth:`pydft.DFT.get_data` method. For example, to visualize
+the overlap matrix :math:`\mathbf{S}` and the Fock matrix 
+:math:`\mathbf{F}`, we can use the script as found below.
+
+.. literalinclude:: scripts/03-matrices.py
+    :language: python
+    :linenos:
+    :emphasize-lines: 18,19
+
+.. figure:: _static/img/user_interface/03-matrices.png
+
 Showing the electronic steps
 ----------------------------
 
@@ -127,3 +172,62 @@ which yields the following total electronic energies for the :code:`SVWN5` and
 
 	SVWN:  -111.14709591483225 Ht
 	PBE:  -111.65660426438342 Ht
+
+Tuning the numerical accuracy
+-----------------------------
+
+The numerical accuracy of an electronic structure calculation in
+:program:`PyDFT` can be controlled through the specification of the radial and
+angular integration grids. These grids are defined per atomic species and can be
+adjusted by the user when constructing the :class:`pydft.DFT` object.
+
+The radial grid is controlled via the number of radial shells
+(:code:`nshells`), while the angular resolution is controlled via the number of
+angular points (:code:`nangpts`). Both parameters are provided as mappings from
+element symbols to integer values. Increasing either parameter generally
+improves the accuracy of the numerical integration at the cost of increased
+computational effort.
+
+The angular grid in :program:`PyDFT` is based on Lebedev quadrature. As a
+consequence, the number of angular points must correspond to one of the
+predefined Lebedev grid sizes. Arbitrary values for :code:`nangpts` are not
+permitted; only the fixed values listed below are valid.
+
+The supported numbers of angular points are:
+
+.. code-block:: text
+
+     6, 14, 26, 38, 50, 74, 86, 110, 146, 170, 194, 230,
+     266, 302, 350, 434, 590, 770, 974, 1202, 1454, 1730,
+     2030, 2354, 2702, 3074, 3470, 3890, 4334, 4802,
+     5294, 5810
+
+By default, :program:`PyDFT` uses 20, 25, and 30 radial shells for first-, 
+second-, and third-row atoms, respectively. For the angular grid, 110 angular
+points are used for all atoms, except for hydrogen, for which 50 angular points
+are used. The maximum angular momentum quantum number :code:`lmax` is determined
+automatically from the chosen number of angular points; for the default values,
+this corresponds to :code:`lmax = 8` for 110 angular points and
+:code:`lmax = 5` for 50 angular points.
+
+Users may override these defaults by explicitly specifying :code:`nshells` and
+:code:`nangpts` when constructing the :class:`pydft.DFT` object. For example, a
+calculation with a moderately accurate grid can be set up as::
+
+    dft = DFT(
+        mol,
+        basis='sto3g',
+        nshells={'C': 32, 'O': 32},
+        nangpts={'C': 230, 'O': 230}
+    )
+
+If higher accuracy is required, the number of radial shells can be increased,
+for example to 64, and the number of angular points can be increased by
+selecting a larger Lebedev grid from the list above. In practice, we observe
+that increasing the number of angular points beyond a certain threshold does
+not lead to significant further improvements in accuracy, whereas increasing
+the number of radial shells continues to systematically reduce the error.
+
+By adjusting :code:`nshells` and selecting an appropriate Lebedev grid via
+:code:`nangpts`, users can balance computational cost and numerical accuracy
+according to the requirements of their specific application.
