@@ -1,52 +1,44 @@
-.. _installation:
-.. index:: Installation
+.. index:: installation
 
 Installation
 ============
 
-PyPi
-----
+:program:`PyDFT` is available via PyPI.
 
-Use Python's built-in virtual environments to isolate your installation. You can
-replace `.venv` with an alternative folder.
+Why environments?
+-----------------
+An environment keeps the packages for a project separate from the rest of your
+system (and from other projects). This prevents accidental upgrades or conflicts
+that can break existing setups. It also makes it easy to remove the environment
+later without touching your system-wide Python.
 
-.. code:: bash
+PyPI (recommended via virtual environment)
+----------------------------------------------------------
 
-	python3 -m venv .venv
-	source .venv/bin/activate
-	pip install --upgrade pip
-	pip install pydft pyqint pylebedev pytessel mendeleev
+Use Python's built-in virtual environments to isolate your installation::
 
-Testing
--------
+    python3 -m venv venv
+    source venv/bin/activate
+    pip install --upgrade pip
+    pip install pydft
 
-To test that your installation is working, you can run the following snippet
-of code
+Optional extra for **isosurface functionality**::
 
-.. code:: python
+    pip install pytessel
 
-	import pydft
-	print(pydft.__version__)
+To leave the environment, run::
 
-The version number should be returned.
+    deactivate
 
-Simple calculation
-------------------
+Alternative (single-user install without a virtual environment)
+---------------------------------------------------------------
 
-To perform a more involved calculation, one can run the following small
-example code:
+If you prefer not to create a virtual environment, you can install for the
+current user only (no system-wide changes)::
 
-.. code:: python
+    pip install --user pyqint
 
-	from pydft import MoleculeBuilder,DFT
-
-	co = MoleculeBuilder().get_molecule("CO")
-	dft = DFT(co, basis='sto3g')
-	en = dft.scf(1e-4)
-	print("Total electronic energy: %f Ht" % en)
-
-which should return the following result:
-
-.. code::
-
-	Total electronic energy: -111.147096 Ht
+.. warning::
+    We **do not recommend** using ``sudo pip install ...``. Installing packages
+    with administrative privileges can overwrite or conflict with system Python
+    components and may break tools your operating system relies on.

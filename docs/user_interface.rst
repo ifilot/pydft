@@ -1,4 +1,3 @@
-.. _user_interface:
 .. index:: userinterface
 
 User Interface
@@ -78,6 +77,74 @@ Performing this calculation shows that the total electronic energy for this
 system corresponds to::
 
     Total electronic energy:      -111.147096 Ht
+
+Result dictionary
+#################
+
+The result of an SCF calculation is captured in a Python dictionary object.
+This dictionary contains all quantities required to analyze, post-process,
+and validate the electronic structure calculation. The data layout is shared
+between PyDFT and PyQInt to ensure a consistent interface across methods.
+
+.. list-table:: Description of the data contained in the result dictionary
+   :widths: 25 75
+   :header-rows: 1
+
+   * - Key
+     - Description
+   * - :code:`energy`
+     - Final converged total electronic energy (Hartree).
+   * - :code:`energies`
+     - Total electronic energy at each SCF iteration.
+   * - :code:`ekin`
+     - Electronic kinetic energy,
+       :math:`\mathrm{Tr}(\mathbf{T}\mathbf{P})`.
+   * - :code:`enuc`
+     - Electron-nuclear attraction energy,
+       :math:`\mathrm{Tr}(\mathbf{V}\mathbf{P})`.
+   * - :code:`erepe`
+     - Electron-electron Coulomb (Hartree) energy,
+       :math:`\mathrm{Tr}(\mathbf{J}\mathbf{P})`.
+   * - :code:`enucrep`
+     - Nuclear-nuclear repulsion energy.
+   * - :code:`ex`
+     - Exchange energy (Hartree-Fock or DFT).
+   * - :code:`ec`
+     - Correlation energy (DFT only).
+   * - :code:`exc`
+     - Total exchange-correlation energy.
+   * - :code:`orbe`
+     - Molecular orbital eigenvalues (orbital energies).
+   * - :code:`orbc`
+     - Molecular orbital coefficient matrix (AO basis).
+   * - :code:`density`
+     - One-particle density matrix :math:`\mathbf{P}`.
+   * - :code:`fock`
+     - Fock matrix :math:`\mathbf{F}`.
+   * - :code:`hartree`
+     - Hartree (Coulomb) matrix :math:`\mathbf{J}`.
+   * - :code:`xc`
+     - Exchange-correlation matrix (DFT only, ``None`` for HF).
+   * - :code:`overlap`
+     - Overlap matrix :math:`\mathbf{S}`.
+   * - :code:`kinetic`
+     - Kinetic energy matrix :math:`\mathbf{T}`.
+   * - :code:`nuclear`
+     - Nuclear attraction matrix :math:`\mathbf{V}`.
+   * - :code:`hcore`
+     - Core Hamiltonian matrix
+       :math:`\mathbf{H}_\mathrm{core} = \mathbf{T} + \mathbf{V}`.
+   * - :code:`mol`
+     - Molecular object defining atoms, geometry, and charge.
+   * - :code:`nuclei`
+     - Nuclear positions and charges.
+   * - :code:`cgfs`
+     - List of contracted Gaussian basis functions.
+   * - :code:`nelec`
+     - Total number of electrons.
+   * - :code:`time_stats`
+     - Dictionary containing timing information for construction and
+       SCF iterations.
 
 Showing the electronic steps
 ############################

@@ -1,4 +1,3 @@
-.. _background:
 .. index:: Background
 
 Background
@@ -31,7 +30,6 @@ Hartree potential
 Electron-electron repulsion is handled by calculating the Hartree potential
 by means of solving Poisson's equation. This equation is solved per fuzzy cell,
 as detailed in the seminal paper of Becke.
-
 
 Exchange-correlation functions
 ------------------------------

@@ -4,4 +4,4 @@ from pydft import MoleculeBuilder, DFT
 # perform DFT calculation on the CO molecule
 co = MoleculeBuilder().from_name("CO")
 dft = DFT(co, basis='sto3g')
-en = dft.scf(1e-5, verbose=True)
+res = dft.scf(1e-5, verbose=True)

@@ -40,8 +40,8 @@ submitted via the `github issue tracker
 
    installation
    background
-   user_interface
-   api
+   building_molecules
+   electronic_structure_calculations
    community_guidelines
 
 Indices and tables
