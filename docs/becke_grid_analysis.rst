@@ -46,30 +46,3 @@ method.
 	:emphasize-lines: 14
 
 .. image:: _static/img/user_interface/06-grid-points.png
-
-Electron density and its gradient
----------------------------------
-
-The :class:`pydft.DFT` class exposes its internal matrices and a number of
-useful functions which we can readily use to interpret its operation. Let us
-start by generating a plot of the electron density using the method
-:meth:`pydft.DFT.get_density_at_points`.
-
-.. literalinclude:: scripts/01-electron-density.py
-    :language: python
-    :linenos:
-    :emphasize-lines: 25
-
-Running the above script yields the electron density.
-
-.. figure:: _static/img/user_interface/01-electron-density.png
-
-Using largely the same code, we can also readily build the electron density
-gradient magnitude using :meth:`pydft.DFT.get_gradient_at_points`.
-
-.. literalinclude:: scripts/02-electron-density-gradient.py
-    :language: python
-    :linenos:
-    :emphasize-lines: 25
-
-.. figure:: _static/img/user_interface/02-electron-density-gradient.png
