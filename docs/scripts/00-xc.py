@@ -1,4 +1,3 @@
-import numpy as np
 from pydft import MoleculeBuilder, DFT
 
 # perform DFT calculation on the CO molecule

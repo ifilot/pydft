@@ -6,13 +6,10 @@ Building molecules
 .. contents:: Table of Contents
     :depth: 3
 
-Molecules can be built either directly using the :code:`Molecule` class or via
-a :code:`MoleculeBuilder` convenience routine. 
-
-.. important::
-
-	The :code:`Molecule` and :code:`MoleculeBuilder` classes are not implemented
-	in :program:`PyDFT` but are obtained from the :program:`PyQInt` module.
+Molecules can be built either directly using the :code:`Molecule` class or via a
+:code:`MoleculeBuilder` convenience routine. The :code:`Molecule` and
+:code:`MoleculeBuilder` classes are not implemented in :program:`PyDFT` but are
+obtained from the :program:`PyQInt` module.
 
 Molecule class
 --------------
@@ -37,7 +34,7 @@ MoleculeBuilder class
 Alternatively, a Molecule can be constructed from the :code:`MoleculeBuilder` 
 class which uses a name. For more information about the :code:`MoleculeBuilder` 
 class, please consult the
-`PyQInt documentation on the MoleculeBuilder class <https://pyqint.imc-tue.nl/user_interface.html#using-the-moleculebuilder-class>`_.
+`PyQInt documentation on the MoleculeBuilder class <https://ifilot.github.io/pyqint/basis_sets_and_molecules.html#using-the-moleculebuilder-class>`_.
 
 .. code-block:: python
 	:linenos:

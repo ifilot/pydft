@@ -7,7 +7,11 @@ mol = MoleculeBuilder().from_name('co')
 cgfs, atoms = mol.build_basis('sto3g')
 
 # construct molecular grid
-molgrid = MolecularGrid(atoms, cgfs, nshells=16, nangpts=74)
+molgrid = MolecularGrid([a for a in mol], cgfs, 
+                        nshells = {'C' : 32, 'O' : 32}, 
+                        nangpts = {'C' : 50, 'O' : 50},
+                        lmax = {'C' : 5, 'O' : 5}
+                        )
 molgrid.initialize()
 
 # obtain the grid points
@@ -29,3 +33,5 @@ ax.set_xlabel('x [a.u.]')
 ax.set_ylabel('y [a.u.]')
 ax.set_zlabel('z [a.u.]')
 ax.set_box_aspect(aspect=None, zoom=0.8)
+
+plt.show()

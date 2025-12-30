@@ -19,7 +19,7 @@ the :meth:`pydft.DFT.scf` routine to start the self-consistent field calculation
 Performing this calculation shows that the total electronic energy for this
 system corresponds to::
 
-    Total electronic energy:      -111.147096 Ht
+    Total electronic energy:      -111.130512 Ht
 
 Result dictionary
 -----------------
@@ -102,24 +102,22 @@ electron-electron repulsion and exchange-correlation energy.
 
 The above script yields the following output::
 
-	Total electronic energy:      -111.147096 Ht
+  Total electronic energy:      -111.130512 Ht
 
-	Kinetic energy:                110.216045 Ht
-	Nuclear attraction:           -304.930390 Ht
-	Electron-electron repulsion:    75.597401 Ht
-	Exchange energy:               -12.055579 Ht
-	Correlation energy:             -1.232665 Ht
-	Exchange-correlation energy:   -13.288244 Ht
-	Nucleus-nucleus repulsion:      21.258092 Ht
+  Kinetic energy:                110.217205 Ht
+  Nuclear attraction:           -304.930902 Ht
+  Electron-electron repulsion:    75.612950 Ht
+  Exchange energy:               -12.055225 Ht
+  Correlation energy:             -1.232632 Ht
+  Exchange-correlation energy:   -13.287857 Ht
+  Nucleus-nucleus repulsion:      21.258092 Ht
 
-	Sum:  -111.147096 Ht
+  Sum:  -111.130512 Ht
 
 Self-consistent field matrices
 ------------------------------
 
-To obtain any of the matrices used in the self-consistent field procedure,
-we can invoke the :meth:`pydft.DFT.get_data` method. For example, to visualize
-the overlap matrix :math:`\mathbf{S}` and the Fock matrix 
+To visualize the overlap matrix :math:`\mathbf{S}` and the Fock matrix
 :math:`\mathbf{F}`, we can use the script as found below.
 
 .. literalinclude:: scripts/03-matrices.py
@@ -131,6 +129,9 @@ the overlap matrix :math:`\mathbf{S}` and the Fock matrix
 
 Showing the electronic steps
 ----------------------------
+
+To get verbose output, i.e. information per electronic step, one can specify
+:code:`verbose = True`.
 
 .. literalinclude:: scripts/00-verbose.py
     :language: python
@@ -170,8 +171,8 @@ To use a different exchange-correlation functional, we can use the
 which yields the following total electronic energies for the :code:`SVWN5` and
 :code:`PBE` exchange-correlation functions::
 
-	SVWN:  -111.14709591483225 Ht
-	PBE:  -111.65660426438342 Ht
+    SVWN:  -111.13051174812225 Ht
+    PBE:  -111.64011292838961 Ht
 
 Tuning the numerical accuracy
 -----------------------------
@@ -212,14 +213,16 @@ this corresponds to :code:`lmax = 8` for 110 angular points and
 
 Users may override these defaults by explicitly specifying :code:`nshells` and
 :code:`nangpts` when constructing the :class:`pydft.DFT` object. For example, a
-calculation with a moderately accurate grid can be set up as::
+calculation with a moderately accurate grid can be set up as
 
-    dft = DFT(
-        mol,
-        basis='sto3g',
-        nshells={'C': 32, 'O': 32},
-        nangpts={'C': 230, 'O': 230}
-    )
+.. literalinclude:: scripts/00-set-r-ang.py
+    :language: python
+    :linenos: 
+    :emphasize-lines: 6,7
+
+which shows the following output::
+
+    Total electronic energy:      -111.142460 Ht
 
 If higher accuracy is required, the number of radial shells can be increased,
 for example to 64, and the number of angular points can be increased by

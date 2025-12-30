@@ -1,26 +1,25 @@
 import numpy as np
 from pydft import MoleculeBuilder, DFT
 
-co = MoleculeBuilder().from_name("CO")
+co = MoleculeBuilder.from_name("CO")
 dft = DFT(co, basis='sto3g')
-en = dft.scf(1e-4, verbose=False)
-print("Total electronic energy:     %12.6f Ht" % en)
+res = dft.scf(1e-4, verbose=False)
+print("Total electronic energy:     %12.6f Ht" % res['energy'])
 print()
 
 # retrieve molecular matrices
-res = dft.get_data()
-P = res['P']
-T = res['T']
-V = res['V']
-J = res['J']
+P = res['density']
+T = res['kinetic']
+V = res['nuclear']
+J = res['hartree']
 
 # calculate energy terms
 Et = np.einsum('ji,ij', P, T)
 Ev = np.einsum('ji,ij', P, V)
 Ej = 0.5 * np.einsum('ji,ij', P, J)
-Ex = res['Ex']
-Ec = res['Ec']
-Exc = res['Exc']
+Ex = res['ex']
+Ec = res['ec']
+Exc = res['exc']
 Enuc = res['enucrep']
 
 print('Kinetic energy:              %12.6f Ht' % Et)

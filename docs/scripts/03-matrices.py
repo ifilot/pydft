@@ -6,7 +6,7 @@ def main():
     # perform DFT calculation on the CO molecule
     co = MoleculeBuilder().from_name("CO")
     dft = DFT(co, basis='sto3g')
-    en = dft.scf(1e-6, verbose=False)
+    res = dft.scf(1e-6, verbose=False)
     
     # build list of basis functions
     labels = []
@@ -15,8 +15,8 @@ def main():
             labels.append('%s - %s' % (a[0],o))
     
     fig, ax = plt.subplots(1, 2, dpi=144, figsize=(8,4))
-    plot_matrix(ax[0], dft.get_data()['S'], xlabels=labels, ylabels=labels, title='Overlap matrix')
-    plot_matrix(ax[1], dft.get_data()['F'], xlabels=labels, ylabels=labels, title='Hamiltonian matrix')
+    plot_matrix(ax[0], res['overlap'], xlabels=labels, ylabels=labels, title='Overlap matrix')
+    plot_matrix(ax[1], res['fock'], xlabels=labels, ylabels=labels, title='Hamiltonian matrix')
 
 def plot_matrix(ax, mat, xlabels=None, ylabels=None, title = None, xlabelrot=90):
     """
