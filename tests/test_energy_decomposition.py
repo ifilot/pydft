@@ -1,13 +1,7 @@
 import unittest
-import sys
-import os
 import numpy as np
 
-# add a reference to load the pyDFT module
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
 from pydft import DFT, MoleculeBuilder
-import pydft
 
 class TestEnergyDecomposition(unittest.TestCase):
     """
@@ -38,14 +32,6 @@ class TestEnergyDecomposition(unittest.TestCase):
         Ec = res['ec']
         Exc = res['exc']
         Enuc = res['enucrep']
-
-        # print('Kinetic energy:              %12.6f' % Et)
-        # print('Nuclear attraction:          %12.6f' % Ev)
-        # print('Electron-electron repulsion: %12.6f' % Ej)
-        # print('Exchange energy:             %12.6f' % (Ex))
-        # print('Correlation energy:          %12.6f' % (Ec))
-        # print('Exchange-correlation energy: %12.6f' % (Exc))
-        # print('Nucleus-nucleus repulsion:   %12.6f' % (Enuc))
 
         esum = Et + Ev + Ej + Exc + Enuc
         np.testing.assert_almost_equal(esum, res['energy'], decimal=5)

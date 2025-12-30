@@ -1,13 +1,13 @@
 import numba as nb
 
 @nb.njit(parallel=True, fastmath=True)
-def stencil_interp(ulm_rev, i, w, out):
-    Neval = i.size
-    Nchan = ulm_rev.shape[1]
-    for c in nb.prange(Nchan):
-        for p in range(Neval):
-            j = i[p]
-            out[c, p] = (w[p,0]*ulm_rev[j-1, c] +
-                        w[p,1]*ulm_rev[j,   c] +
-                        w[p,2]*ulm_rev[j+1, c] +
-                        w[p,3]*ulm_rev[j+2, c])
+def stencil_interp(vals, x, weights, out):
+    npts = x.size
+    channels = vals.shape[1]
+    for c in nb.prange(channels):
+        for p in range(npts):
+            j = x[p]
+            out[c, p] = (weights[p,0] * vals[j-1, c] +
+                         weights[p,1] * vals[j,   c] +
+                         weights[p,2] * vals[j+1, c] +
+                         weights[p,3] * vals[j+2, c])

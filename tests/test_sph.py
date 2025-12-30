@@ -1,13 +1,8 @@
 import unittest
-import sys
-import os
 import numpy as np
 from scipy.special import sph_harm_y
 
-# add a reference to load the pyDFT module
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
-
-from pydft import spherical_harmonic, spherical_harmonic_cart
+from pydft import spherical_harmonic
 
 class TestSphericalHarmonics(unittest.TestCase):      
 

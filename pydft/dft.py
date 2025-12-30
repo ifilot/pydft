@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
 from .moleculargrid import MolecularGrid
-from pyqint import PyQInt, Molecule, cgf
+from pyqint import PyQInt, Molecule, CGF
 import numpy as np
 import time
-from packaging import version
 from copy import deepcopy
+from collections.abc import Mapping
+from .data import ATOM_NSHELLS, LMAX_NANGPTS
 
 # couple of hardcoded variables for the DIIS algorithm
 SUBSPACE_LENGTH = 3
@@ -14,11 +15,11 @@ SUBSPACE_START = 4
 class DFT():
     def __init__(self, 
                  mol:Molecule, 
-                 basis:str|list[cgf] = 'sto3g', 
+                 basis:str|list[CGF] = 'sto3g', 
                  functional:str = 'svwn5',
-                 nshells:int = 32,
-                 nangpts:int = 110,
-                 lmax:int = 8,
+                 nshells: Mapping[str, int] | None = None,
+                 nangpts: Mapping[str, int] | None = None,
+                 lmax: Mapping[str, int] | None = None,
                  fdpts:int=7,
                  normalize:bool = True):
         """
@@ -47,14 +48,12 @@ class DFT():
             whether to provide verbose output, by default False
         """
         self.__mol = mol
+        self.__calculate_grid_settings(nshells, nangpts, lmax)
         self.__integrator = PyQInt()
         self.__basis = basis
         self.__time_stats = {}
         self.__itermax = 100
-        self.__nshells = nshells
-        self.__nangpts = nangpts
         self.__fdpts = fdpts
-        self.__lmax = lmax
         self.__functional = functional
         self.__normalize = normalize
         
@@ -155,6 +154,7 @@ class DFT():
             "enucrep": self.__enuc,
             "ekin": np.einsum("ij,ji", self.__T, self.__P),
             "enuc": np.einsum("ij,ji", self.__V, self.__P),
+            "erepe": np.einsum("ij,ji", self.__J, self.__P),
 
             # timing
             "time_stats": {
@@ -300,6 +300,43 @@ class DFT():
         """
         return self.__molgrid.construct_times
     
+    def __calculate_grid_settings(self, nshells, nangpts, lmax):
+        """
+        Build a Mapping where the grid settings for each atom are set, unless
+        they are already provided by the user.
+
+        The lmax mapping can be inferred from nangpts, but the user may override
+        this.
+        """
+        # collect atom types
+        attypes = np.unique([a[0] for a in self.__mol])
+
+        # build dictionary of number of radial points (Gauss-Chebychev grid)
+        # per atom type
+        if nshells is None:
+            self.__nshells = {}
+            for a in attypes:
+                self.__nshells[a] = ATOM_NSHELLS[a]
+        else:
+            self.__nshells = nshells
+
+        # build dictionary of number of angular points (for Lebedev grid) per
+        # atom type
+        if nangpts is None:
+            self.__nangpts = {}
+            for a in attypes:
+                self.__nangpts[a] = 50 if a == 'H' else 110
+        else:
+            self.__nangpts = nangpts
+
+        # set lmax values based on number of angular points
+        if lmax is None:
+            self.__lmax = {}
+            for k,v in self.__nangpts.items():
+                self.__lmax[k] = LMAX_NANGPTS[v]
+        else:
+            self.__lmax = lmax
+
     def __iterate(self, niter, giis=True, mix=0.9):
         """
         Perform single-step iteration
@@ -400,7 +437,7 @@ class DFT():
         self.__nelec = np.sum([nucleus[1] for nucleus in self.__nuclei])
 
         # build molecular grid
-        self.__molgrid = MolecularGrid(self.__nuclei, 
+        self.__molgrid = MolecularGrid([at for at in self.__mol],
                                        self.__cgfs, 
                                        nshells=self.__nshells, 
                                        nangpts=self.__nangpts,
@@ -472,12 +509,12 @@ class DFT():
         Calculate the coulombic interaction matrix using the
         molecular grid
         """
-        res, timestats = self.__molgrid.calculate_coulombic_matrix(True)
+        J, timestats = self.__molgrid.calculate_coulombic_matrix(True)
         self.calctimes['ulm_interpolation'].append(timestats['ulm_interpolation'])
         self.calctimes['build_hartree_field'].append(timestats['build_hartree_field'])
         self.calctimes['build_repulsion_matrix'].append(timestats['build_repulsion_matrix'])
 
-        return res
+        return J
     
     def __calculate_P(self):
         """

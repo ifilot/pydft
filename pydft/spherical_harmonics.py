@@ -9,7 +9,6 @@ class SphericalHarmonicsCache:
     """
     Smart cache for real spherical harmonics Y_lm(theta, phi)
     """
-
     _cache = {}  # (l, angpts_key) -> (2*l+1, npts)
 
     @staticmethod

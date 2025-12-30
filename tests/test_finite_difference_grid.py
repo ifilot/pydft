@@ -1,10 +1,5 @@
 import unittest
-import sys
-import os
 import numpy as np
-
-# add a reference to load the pyDFT module
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from pydft import MoleculeBuilder, DFT
 
@@ -19,7 +14,7 @@ class TestFiniteDifferenceSchemes(unittest.TestCase):
         mol_builder = MoleculeBuilder()
         mol = mol_builder.from_name('CO')
 
-        answers = [-110.961 , -111.1438, -111.1431, -111.1467, -111.1461, -111.1445]
+        answers = [-110.8427, -111.1378, -111.1305, -111.1437, -111.1475, -111.1348]
 
         res = []
         for fdpts in [3,5,7,9,11,13]:

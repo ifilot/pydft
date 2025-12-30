@@ -11,7 +11,7 @@ authors = [
 maintainers = [
     { name="Ivo Filot", email="ivo@ivofilot.nl" },
 ]
-description = "pydft"
+description = "Localized-orbital Density Functional Theory code for educational purposes. "
 readme = "README.md"
 requires-python = ">=3.9"
 license = {text = "GPL-3.0-or-later"}
@@ -22,7 +22,7 @@ classifiers = [
 dependencies = [
     "scipy>=1.15",
     "numpy",
-    "pyqint",
+    "pyqint>=1.2",
     "pylebedev",
     "matplotlib",
     "numba"
