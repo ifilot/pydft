@@ -7,8 +7,8 @@ mol = MoleculeBuilder().from_name('co')
 
 # construct dft object
 dft = DFT(mol, basis='sto3g')
-energy = dft.scf()
-C = dft.get_data()['C']
+res = dft.scf()
+C = res['orbc']
 
 molgrid = dft.get_molgrid_copy()
 she1 = molgrid.get_spherical_harmonic_expansion_of_amplitude(C[:,4], radial_factor=True)

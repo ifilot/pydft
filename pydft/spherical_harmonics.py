@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Real spherical harmonics used for density and Hartree-potential expansions."""
 
 import numpy as np
 from scipy.special import sph_harm_y, lpmv
@@ -72,6 +73,13 @@ class SphericalHarmonicsCache:
 
     @classmethod
     def get_ylm(cls, lmax, nangpts):
+        """
+        Return all real spherical harmonics up to ``lmax`` on a Lebedev grid.
+
+        The rows are ordered by increasing ``l`` and, within each ``l``, by
+        ``m=-l, ..., l``. The resulting array has shape
+        ``((lmax + 1)**2, nangpts)``.
+        """
         return np.vstack([
             cls.get_l(l, nangpts) for l in range(lmax + 1)
         ])

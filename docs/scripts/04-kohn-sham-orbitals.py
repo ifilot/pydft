@@ -6,7 +6,7 @@ def main():
     # perform DFT calculation on the CO molecule
     co = MoleculeBuilder().from_name("CO")
     dft = DFT(co, basis='sto3g')
-    en = dft.scf(1e-6, verbose=False)
+    res = dft.scf(1e-6, verbose=False)
     
     # build list of basis functions
     labels = []
@@ -15,7 +15,7 @@ def main():
             labels.append('%s - %s' % (a[0],o))
     
     fig, ax = plt.subplots(1, 1, dpi=144, figsize=(4,4))
-    plot_matrix(ax, dft.get_data()['C'], xlabels=[str(i) for i in np.arange(1,11)], 
+    plot_matrix(ax, res['orbc'], xlabels=[str(i) for i in np.arange(1,11)],
                 ylabels=labels, title='Coefficient matrix')
 
 def plot_matrix(ax, mat, xlabels=None, ylabels=None, title = None, xlabelrot=90):

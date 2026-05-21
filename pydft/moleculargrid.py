@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Molecular Becke grid construction and grid-based DFT matrix assembly."""
 
 import numpy as np
 from pyqint import PyQInt, CGF
@@ -20,6 +21,21 @@ Vec3 = npt.NDArray[np.float64]
 AtomEntry = Tuple[str, Vec3]
 
 class MolecularGrid:
+    """
+    Combine atom-centered grids into a molecular integration grid.
+
+    :class:`MolecularGrid` is the numerical workhorse behind the SCF driver. It
+    constructs Becke fuzzy-cell weights, caches basis-function amplitudes and
+    gradients on all grid points, evaluates electron densities from density
+    matrices, builds the Hartree potential from atom-centered spherical-harmonic
+    expansions, and assembles exchange-correlation matrix contributions.
+
+    The object is intentionally more transparent than a production quantum
+    chemistry grid engine. Many getters expose intermediate arrays so examples
+    and documentation can visualize the quadrature grid, Becke weights, electron
+    density, molecular orbitals, and local potentials.
+    """
+
     def __init__(self, 
                  atoms:list[AtomEntry], 
                  cgfs:list[CGF], 
@@ -402,7 +418,13 @@ class MolecularGrid:
 
     def calculate_coulombic_matrix(self, calculate_timestats:bool=False) -> np.array:
         r"""
-        Build the coulomb matrix :math:`\mathbf{J}`
+        Build the Coulomb matrix :math:`\mathbf{J}` from the Hartree potential.
+
+        The electron density is represented on each atomic grid as
+        spherical-harmonic coefficients. The corresponding Hartree-potential
+        coefficients are interpolated from every atomic center to every point of
+        the molecular Becke grid. The final matrix element is the quadrature of
+        the Hartree potential multiplied by a pair of basis functions.
 
         Returns
         -------
@@ -476,7 +498,12 @@ class MolecularGrid:
 
     def calculate_exchange(self) -> (np.ndarray,float):
         r"""
-        Build the exchange matrix and give the exchange energy for the molecule
+        Build the exchange matrix and exchange energy for the molecule.
+
+        For LDA functionals, the matrix contribution is local in the density.
+        For GGA functionals such as PBE, the derivative with respect to
+        :math:`\sigma = |\nabla\rho|^2` adds a second term involving basis
+        function gradients.
 
         Returns
         -------
@@ -487,7 +514,8 @@ class MolecularGrid:
         dens = np.concatenate([atgrid.get_density() for atgrid in self.__atomgrids])
         if self.__functionals.is_gga():
             grad = np.concatenate([atgrid.get_gradient_squared() for atgrid in self.__atomgrids])
-            fx, vfx = self.__functionals.calc_x(dens, grad)
+            density_gradient = np.concatenate([atgrid.get_gradient() for atgrid in self.__atomgrids])
+            fx, vfx, vx_sigma = self.__functionals.calc_x(dens, grad, deriv_sigma=True)
         else:
             fx, vfx = self.__functionals.calc_x(dens)
         
@@ -498,27 +526,37 @@ class MolecularGrid:
         X = np.zeros((len(self.__basis), len(self.__basis)))
         
         # exchange parameters
-        X = np.einsum('k,ik,jk,k->ij', vfx, 
+        X = np.einsum('k,ik,jk,k->ij', vfx,
                                        self.__fullgrid_amplitudes,
                                        self.__fullgrid_amplitudes,
                                        self.__mgw,
                                        optimize=True)
-        
+
+        if self.__functionals.is_gga():
+            X += self.__calculate_gga_matrix_contribution(vx_sigma,
+                                                          density_gradient)
+
         return X, ex
     
     def calculate_correlation(self) -> (np.ndarray, float):
         """
-        Build the correlation matrix and give the correlation energy for the molecule
+        Build the correlation matrix and correlation energy for the molecule.
+
+        The same local-density and gradient-corrected structure used for
+        exchange is applied to the correlation functional. The returned matrix is
+        added to the exchange matrix by the SCF driver to form the full
+        exchange-correlation contribution.
 
         Returns
         -------
         np.ndarray,float
-            Correlation matrix and exchange energy
+            Correlation matrix and correlation energy
         """
         dens = np.concatenate([atgrid.get_density() for atgrid in self.__atomgrids])
         if self.__functionals.is_gga():
             grad = np.concatenate([atgrid.get_gradient_squared() for atgrid in self.__atomgrids])
-            fc, vfc = self.__functionals.calc_c(dens, grad)
+            density_gradient = np.concatenate([atgrid.get_gradient() for atgrid in self.__atomgrids])
+            fc, vfc, vc_sigma = self.__functionals.calc_c(dens, grad, deriv_sigma=True)
         else:
             fc, vfc = self.__functionals.calc_c(dens)
         
@@ -529,13 +567,41 @@ class MolecularGrid:
         C = np.zeros((len(self.__basis), len(self.__basis)))
         
         # exchange parameters
-        C = np.einsum('k,ik,jk,k->ij', vfc, 
+        C = np.einsum('k,ik,jk,k->ij', vfc,
                                        self.__fullgrid_amplitudes,
                                        self.__fullgrid_amplitudes,
                                        self.__mgw,
                                        optimize=True)
-        
+
+        if self.__functionals.is_gga():
+            C += self.__calculate_gga_matrix_contribution(vc_sigma,
+                                                          density_gradient)
+
         return C, ec
+
+    def __calculate_gga_matrix_contribution(self,
+                                            vsigma:np.ndarray,
+                                            density_gradient:np.ndarray) -> np.ndarray:
+        r"""
+        Build the GGA contribution from derivatives with respect to
+        :math:`\sigma = |\nabla\rho|^2`.
+
+        In a GGA functional the energy density depends on both ``rho`` and
+        ``sigma``. Varying ``sigma`` introduces terms containing
+        :math:`\nabla\rho \cdot \nabla\chi_i`, where ``chi_i`` is a basis
+        function. This helper assembles that gradient-dependent matrix term.
+        """
+        grad_dot_basis_grad = np.einsum('kx,ikx->ik',
+                                        density_gradient,
+                                        self.__fullgrid_ampgrads,
+                                        optimize=True)
+        gga = 2.0 * np.einsum('k,ik,jk,k->ij',
+                              vsigma,
+                              grad_dot_basis_grad,
+                              self.__fullgrid_amplitudes,
+                              self.__mgw,
+                              optimize=True)
+        return gga + gga.T
 
     def get_density_at_points(self, 
                               spoints:np.ndarray, 
@@ -556,8 +622,8 @@ class MolecularGrid:
         Returns
         -------
         np.array
-            Electron density specified at grid points :math:`(N \\times 1)` 
-            with :math:`N` the number of grid points
+            Electron density specified at grid points :math:`(N \\times 1)`
+            with :math:`N` the number of grid points.
         """
         # build the amplitudes at the specified points
         amps = np.ndarray((len(self.__basis), len(spoints)))
@@ -586,8 +652,8 @@ class MolecularGrid:
         Returns
         -------
         np.array
-            Electron density specified at grid points :math:`(N \\times 1)` 
-            with :math:`N` the number of grid points
+            Molecular orbital amplitude specified at grid points
+            :math:`(N \\times 1)` with :math:`N` the number of grid points.
         """
         # build the amplitudes at the specified points
         amps = np.ndarray((len(self.__basis), len(spoints)))
@@ -690,7 +756,7 @@ class MolecularGrid:
         """
         dens = self.get_density_at_points(pts, P)
         if self.__functionals.is_gga():
-            grad = np.linalg.norm(self.get_gradient_at_points(pts, P), axis=1)
+            grad = np.linalg.norm(self.get_gradient_at_points(pts, P), axis=1)**2
             fx, vfx = self.__functionals.calc_x(dens, grad)
         else:
             fx, vfx = self.__functionals.calc_x(dens)
@@ -720,7 +786,7 @@ class MolecularGrid:
         """
         dens = self.get_density_at_points(pts, P)
         if self.__functionals.is_gga():
-            grad = np.linalg.norm(self.get_gradient_at_points(pts, P), axis=1)
+            grad = np.linalg.norm(self.get_gradient_at_points(pts, P), axis=1)**2
             fc, vfc = self.__functionals.calc_c(dens, grad)
         else:
             fc, vfc = self.__functionals.calc_c(dens)
@@ -922,8 +988,8 @@ class MolecularGrid:
             self.__ygridpoints[i,:] = np.subtract(self.__mgpts[:,1], ap[1])
             self.__zgridpoints[i,:] = np.subtract(self.__mgpts[:,2], ap[2])
             
-            # calculate radial distance between global gridpoint and atom i
-            # TODO: rewrite this
+            # calculate radial distance between each molecular grid point and
+            # atom i. These radii are reused for Hartree-potential interpolation.
             xy = np.add(np.power(self.__xgridpoints[i,:], 2),
                         np.power(self.__ygridpoints[i,:], 2))
             xyz = np.add(xy, np.power(self.__zgridpoints[i,:], 2))
@@ -1010,11 +1076,25 @@ class MolecularGrid:
         self.construct_times['basis_function_amplitudes'] = time.perf_counter() - st
 
     def __build_gradients(self):
+        """
+        Precalculate basis-function gradients on every molecular grid point.
+
+        GGA functionals require :math:`|\nabla\rho|^2` and matrix terms that
+        contain basis-function gradients. These arrays mirror the cached basis
+        amplitudes built by :meth:`__build_amplitudes`, but store the Cartesian
+        gradient components for each basis function and grid point.
+        """
         self.__ampgrads = []
         for i in range(len(self.__atoms)):
             self.__ampgrads.append(np.empty( (len(self.__basis), len(self.__gridpoints_per_atom[i]), 3) ))
             for j,cgf in enumerate(self.__basis):
                 self.__ampgrads[i][j,:] = self.integrator.plot_gradient(self.__gridpoints_per_atom[i], [1], [cgf])
+
+        self.__fullgrid_ampgrads = np.empty((len(self.__basis),
+                                             np.sum([len(mw) for mw in self.__mweights]),
+                                             3))
+        for i,cgf in enumerate(self.__basis):
+            self.__fullgrid_ampgrads[i,:,:] = np.concatenate([self.__ampgrads[a][i] for a in range(len(self.__atoms))])
 
     def __vij(self, mu, chi):
         """

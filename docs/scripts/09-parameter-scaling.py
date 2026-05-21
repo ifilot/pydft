@@ -15,11 +15,11 @@ def main():
     nvals = [8,16,32,64,92,128,256]
     for n in nvals:
         st = time.time()
-        dft = DFT(co, basis='sto3g', nshells=n)
-        en = dft.scf(1e-6, verbose=False)
+        dft = DFT(co, basis='sto3g', nshells={'C': n, 'O': n})
+        res = dft.scf(1e-6, verbose=False)
         dt = time.time() - st
         t.append(dt)
-        print("%3i %12.4f %5.4f" % (n, en, dt))
+        print("%3i %12.4f %5.4f" % (n, res['energy'], dt))
     print()
     
     plt.loglog(nvals, t, 'o--', label=r'$N_{r}$')
@@ -30,11 +30,13 @@ def main():
     avals = [38,74,110,194,302,590]
     for a in avals:
         st = time.time()
-        dft = DFT(co, basis='sto3g', nshells=64, nangpts=a)
-        en = dft.scf(1e-6, verbose=False)
+        dft = DFT(co, basis='sto3g',
+                  nshells={'C': 64, 'O': 64},
+                  nangpts={'C': a, 'O': a})
+        res = dft.scf(1e-6, verbose=False)
         dt = time.time() - st
         t.append(dt)
-        print("%3i %12.4f %5.4f" % (a, en, dt))
+        print("%3i %12.4f %5.4f" % (a, res['energy'], dt))
     print()
         
     plt.loglog(avals, t, 'o--', label=r'$N_{a}$')
@@ -45,11 +47,14 @@ def main():
     lvals = [2,3,4,6,8,12,16,24]
     for lmax in lvals:
         st = time.time()
-        dft = DFT(co, basis='sto3g', nshells=64, nangpts=590, lmax=lmax)
-        en = dft.scf(1e-6, verbose=False)
+        dft = DFT(co, basis='sto3g',
+                  nshells={'C': 64, 'O': 64},
+                  nangpts={'C': 590, 'O': 590},
+                  lmax={'C': lmax, 'O': lmax})
+        res = dft.scf(1e-6, verbose=False)
         dt = time.time() - st
         t.append(dt)
-        print("%3i %12.4f %5.4f" % (lmax, en, dt))
+        print("%3i %12.4f %5.4f" % (lmax, res['energy'], dt))
     print()
     
     plt.loglog(lvals, t, 'o--', label=r'$l_{\text{max}}$')
@@ -61,14 +66,17 @@ def main():
     fdvals = [3,5,7,9,11,13,15,17]
     for fd in fdvals:
         st = time.time()
-        dft = DFT(co, basis='sto3g', nshells=64, nangpts=194, fdpts=fd)
-        en = dft.scf(1e-6, verbose=False)
+        dft = DFT(co, basis='sto3g',
+                  nshells={'C': 64, 'O': 64},
+                  nangpts={'C': 194, 'O': 194},
+                  fdpts=fd)
+        res = dft.scf(1e-6, verbose=False)
         dt = time.time() - st
         t.append(dt)
-        print("%3i %12.4f %5.4f" % (fd, en, dt))
+        print("%3i %12.4f %5.4f" % (fd, res['energy'], dt))
     print()
         
-    plt.loglog(lvals, t, 'o--', label=r'$N_{\text{fd}}$')
+    plt.loglog(fdvals, t, 'o--', label=r'$N_{\text{fd}}$')
     plt.grid()
     plt.xlabel('Value [-]')
     plt.ylabel('Computation time [s]')

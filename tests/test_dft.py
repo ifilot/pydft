@@ -142,7 +142,7 @@ class TestDFT(unittest.TestCase):
         dft = DFT(mol, basis='sto3g')
         res = dft.scf()
 
-        answer = -227.95654782577773
+        answer = -227.9563844056453
         np.testing.assert_almost_equal(res['energy'], answer, 4)
 
 if __name__ == '__main__':

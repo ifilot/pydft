@@ -6,11 +6,11 @@ def main():
     # perform DFT calculation on the CO molecule
     co = MoleculeBuilder().from_name("CO")
     dft = DFT(co, basis='sto3g')
-    en = dft.scf(1e-4, verbose=False)
+    res = dft.scf(1e-4, verbose=False)
         
     # grab a copy of the MolecularGrid object and of the coefficient matrix
     molgrid = dft.get_molgrid_copy()
-    orbc = dft.get_data()['C']
+    orbc = res['orbc']
 
     sz = 10     # size of the domain
     npts = 50   # number of sampling points per cartesian direction

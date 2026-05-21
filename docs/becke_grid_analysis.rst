@@ -5,7 +5,14 @@ Becke grid analysis
     :depth: 3
 
 All numerical integrations are performed by means of Gauss-Chebychev and Lebedev
-quadrature using the Becke grid. 
+quadrature using the Becke grid. The radial Gauss-Chebychev points describe the
+distance from an atomic center, while the Lebedev points describe directions on
+the unit sphere. Their tensor product gives an atom-centered grid.
+
+For molecules, these atom-centered grids overlap. Becke weights turn the overlap
+into a smooth partition of unity: each grid point receives one weight per atom,
+and the weights at that point sum to one. Integrals over the whole molecule can
+therefore be evaluated as a weighted sum of atomic-grid contributions.
 
 Atomic fuzzy cells
 ------------------

@@ -1,3 +1,5 @@
+"""Public package interface for PyDFT."""
+
 from .dft import DFT
 from .atomicgrid import AtomicGrid
 from .moleculargrid import MolecularGrid

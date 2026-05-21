@@ -47,6 +47,7 @@ submitted via the `github issue tracker
    becke_grid_analysis
    hartree_potential_analysis
    scalar_field_analysis
+   api_reference
    benchmarks
    community_guidelines
 

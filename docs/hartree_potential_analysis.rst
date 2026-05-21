@@ -9,6 +9,12 @@ Hartree potential analysis
 The Hartree potential is calculated from the electron density distribution
 using the Poisson equation. 
 
+PyDFT solves this problem in an atom-centered representation. The molecular
+density is first split into Becke fuzzy cells. Within each cell, the angular
+dependence is expanded in real spherical harmonics, leaving a set of radial
+equations that can be solved numerically. The resulting coefficients are later
+interpolated back to the full molecular grid to assemble the Coulomb matrix.
+
 Projection onto spherical harmonics
 -----------------------------------
 
@@ -34,3 +40,32 @@ We can readily visualize and interpret this projection using the
 	:emphasize-lines: 13
 
 .. image:: _static/img/user_interface/07-spherical-harmonics-projection.png
+
+Radial Poisson solve
+--------------------
+
+After the density coefficients :math:`\rho_{klm}` have been constructed, PyDFT
+solves a finite-difference form of the radial Poisson equation for each
+:math:`(l,m)` channel. The solution is stored as Hartree-potential expansion
+coefficients :math:`U_{klm}` on the radial grid of each atom.
+
+During an SCF calculation the density changes at every iteration, so these
+coefficients also change. The geometry of the interpolation problem, however,
+does not change: the molecular grid points remain at the same distances from
+each atomic center. PyDFT therefore precomputes cubic interpolation stencils once
+and reuses them when the updated :math:`U_{klm}` values are needed on the
+molecular grid.
+
+Coulomb matrix assembly
+-----------------------
+
+Once the Hartree potential is known on the molecular grid, the Coulomb matrix is
+obtained by numerical quadrature over products of basis functions:
+
+.. math::
+
+   J_{ij} = \int \chi_i(\mathbf{r})\,U(\mathbf{r})\,\chi_j(\mathbf{r})\,
+            d\mathbf{r}.
+
+In the code, this final step is performed by
+:meth:`pydft.MolecularGrid.calculate_coulombic_matrix`.

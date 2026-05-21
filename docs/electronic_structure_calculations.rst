@@ -7,7 +7,8 @@ Electronic Structure Calculations
     :depth: 3
 
 To start, we perform a high-level calculation of the electronic structure
-of the carbon-monoxide molecule using the PBE exchange-correlation functional.
+of the carbon-monoxide molecule using the default SVWN5 exchange-correlation
+functional.
 To perform this calculation, we first have to construct a
 :class:`pydft.DFT` object which requires a molecule as its input. Next, we use
 the :meth:`pydft.DFT.scf` routine to start the self-consistent field calculation.
@@ -28,6 +29,14 @@ The result of an SCF calculation is captured in a Python dictionary object.
 This dictionary contains all quantities required to analyze, post-process,
 and validate the electronic structure calculation. The data layout is shared
 between PyDFT and PyQInt to ensure a consistent interface across methods.
+
+The most commonly used key is :code:`energy`, which stores the final converged
+total energy. Other entries expose the objects that appear in the SCF equations:
+the density matrix :math:`\mathbf{P}`, the one-electron matrices
+:math:`\mathbf{S}`, :math:`\mathbf{T}`, and :math:`\mathbf{V}`, the Hartree
+matrix :math:`\mathbf{J}`, and the exchange-correlation matrix. This is why
+examples usually store the SCF result as :code:`res` and then access quantities
+such as :code:`res['energy']` or :code:`res['density']`.
 
 .. list-table:: Description of the data contained in the result dictionary
    :widths: 25 75
@@ -159,10 +168,18 @@ Executing the script above yields the following output::
 	018 | E =  -111.146838 | dE = 8.0277e-08 | 0.0660 s
 	Stopping SCF cycle, convergence reached.
 
+Each line corresponds to one update of the density matrix. Internally, PyDFT
+uses the current density matrix to build the electron density on the molecular
+grid, constructs the Hartree and exchange-correlation matrices, forms the
+Kohn-Sham/Fock matrix, diagonalizes it, and then builds the next density matrix
+from the occupied orbitals. The energy difference :code:`dE` is the convergence
+measure used by :meth:`pydft.DFT.scf`.
+
 Different exchange-correlation functionals
 ------------------------------------------
 
-To use a different exchange-correlation functional, we can use the 
+To use a different exchange-correlation functional, pass the ``functional``
+argument when constructing the :class:`pydft.DFT` object:
 
 .. literalinclude:: scripts/00-xc.py
     :language: python

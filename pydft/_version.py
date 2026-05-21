@@ -1,3 +1,5 @@
+"""Package version lookup with a local fallback for editable checkouts."""
+
 from importlib.metadata import version, PackageNotFoundError
 
 try:

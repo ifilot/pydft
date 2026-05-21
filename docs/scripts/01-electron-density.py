@@ -6,7 +6,7 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 # perform DFT calculation on the CO molecule
 co = MoleculeBuilder().from_name("CO")
 dft = DFT(co, basis='sto3g')
-en = dft.scf(1e-6, verbose=False)
+res = dft.scf(1e-6, verbose=False)
 
 # generate grid of points and calculate the electron density for these points
 sz = 4      # size of the domain

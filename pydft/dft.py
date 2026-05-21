@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""High-level self-consistent field driver for educational DFT calculations."""
 
 from .moleculargrid import MolecularGrid
 from pyqint import PyQInt, Molecule, CGF
@@ -13,6 +14,24 @@ SUBSPACE_LENGTH = 3
 SUBSPACE_START = 4
 
 class DFT():
+    """
+    Coordinate a complete Kohn-Sham density-functional theory calculation.
+
+    The :class:`DFT` object is the main entry point for users. It owns the
+    molecular geometry, the Gaussian basis functions, the numerical molecular
+    grid, and the matrices used in the self-consistent field (SCF) cycle. The
+    implementation intentionally keeps the SCF steps visible: one-electron
+    matrix construction, density-matrix formation, grid-based Hartree and
+    exchange-correlation terms, Fock matrix diagonalization, and convergence
+    acceleration are all represented by small methods.
+
+    Notes
+    -----
+    Calling :meth:`scf` returns a dictionary with matrices, energies, orbitals,
+    and timing data. This makes the object useful both for running calculations
+    and for inspecting the intermediate objects that appear in a DFT textbook.
+    """
+
     def __init__(self, 
                  mol:Molecule, 
                  basis:str|list[CGF] = 'sto3g', 
@@ -222,17 +241,28 @@ class DFT():
     
     def scf(self, tol:float=1e-5, verbose:bool=False) -> dict:
         """
-        Perform the self-consistent field procedure
+        Perform the self-consistent field procedure.
+
+        The SCF cycle repeatedly builds the density-dependent parts of the
+        Kohn-Sham matrix from the current density matrix, diagonalizes the
+        resulting Fock/Kohn-Sham matrix, and updates the density matrix until the
+        total energy changes by less than ``tol``. Early iterations use linear
+        mixing; later iterations use DIIS extrapolation when possible.
 
         Parameters
         ----------
         tol : float, optional
-            electronic convergence criterion, by default 1e-5
+            Electronic energy convergence criterion in Hartree. The default is
+            ``1e-5``.
+        verbose : bool, optional
+            If ``True``, print one line per SCF iteration showing the iteration
+            number, total energy, energy change, and elapsed time.
 
         Returns
         -------
-        float
-            total electronic energy (in Hartrees)
+        dict
+            Result dictionary as returned by :meth:`get_data`. The final total
+            energy is available as ``result['energy']``.
         """
         # construct stagnant matrices
         self.__setup()
@@ -346,8 +376,25 @@ class DFT():
             self.__lmax = lmax
 
     def __iterate(self, niter, giis=True, mix=0.9):
-        """
-        Perform single-step iteration
+        r"""
+        Perform one SCF iteration.
+
+        Each iteration follows the Kohn-Sham workflow:
+
+        1. Use the current density matrix to build the electron density on the
+           molecular grid.
+        2. Solve for the grid-based Hartree potential and assemble the Coulomb
+           matrix :math:`\mathbf{J}`.
+        3. Evaluate the exchange-correlation functional and assemble the
+           exchange-correlation matrix.
+        4. Combine these pieces with the core Hamiltonian to form the Fock
+           matrix.
+        5. Transform to an orthonormal basis, diagonalize, back-transform the
+           molecular orbital coefficients, and form the next density matrix.
+
+        DIIS is used after the initial iterations to extrapolate a better Fock
+        matrix from previous residuals. If DIIS fails numerically, the code falls
+        back to linear mixing for that step.
         """
         # calculate J and XC matrices based on the current electron
         # density estimate as captured in the density matrix P

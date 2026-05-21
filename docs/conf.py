@@ -13,7 +13,12 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
-import sphinx_rtd_theme
+
+try:
+    import sphinx_rtd_theme
+    _has_rtd_theme = True
+except ImportError:
+    _has_rtd_theme = False
 
 # -- Project information -----------------------------------------------------
 
@@ -30,9 +35,24 @@ author = 'Ivo Filot'
 extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.autosectionlabel',
-    'sphinx_rtd_theme',
     'sphinx.ext.autodoc',
     'sphinx.ext.napoleon'
+]
+if _has_rtd_theme:
+    extensions.append('sphinx_rtd_theme')
+
+autodoc_mock_imports = [
+    'matplotlib',
+    'mpl_toolkits',
+    'numba',
+    'numpy',
+    'numpy.typing',
+    'pylebedev',
+    'pyqint',
+    'pytessel',
+    'scipy',
+    'scipy.interpolate',
+    'scipy.special',
 ]
 
 suppress_warnings = ['autosectionlabel.*']
@@ -51,7 +71,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinx_rtd_theme' if _has_rtd_theme else 'alabaster'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
