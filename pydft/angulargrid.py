@@ -51,7 +51,7 @@ class AngularGrid:
             # return datapoints
             return self.__coeff[str(numpoints)]
         else:
-            raise Exception('There is no Lebedev order with %s number of points' % numpoints)
+            raise ValueError('There is no Lebedev order with %s number of points' % numpoints)
     
     def get_dataset_sizes(self):
         """

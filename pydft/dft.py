@@ -130,6 +130,7 @@ class DFT():
 
         **Orbital quantities**
             * ``orbc`` : Molecular orbital coefficient matrix
+            * ``C`` : Compatibility alias for ``orbc``
             * ``orbe`` : Molecular orbital eigenvalues
 
         **Matrices and operators**
@@ -138,9 +139,12 @@ class DFT():
             * ``nuclear`` : Nuclear attraction matrix
             * ``hcore`` : Core Hamiltonian matrix (T + V)
             * ``density`` : Density matrix
+            * ``P`` : Compatibility alias for ``density``
             * ``fock`` : Fock matrix
             * ``hartree`` : Hartree (Coulomb) matrix
+            * ``J`` : Compatibility alias for ``hartree``
             * ``xc`` : Exchange-correlation matrix (DFT only, ``None`` for HF)
+            * ``XC`` : Compatibility alias for ``xc``
 
         **Timing information**
             * ``time_stats`` : Dictionary with timing breakdowns
@@ -160,10 +164,12 @@ class DFT():
 
             # orbital information
             "orbc": self.__C,        # MO coefficients
+            "C": self.__C,           # compatibility alias for MO coefficients
             "orbe": self.__e,        # MO eigenvalues
 
             # density & operators
             "density": self.__P,
+            "P": self.__P,           # compatibility alias for density matrix
             "fock": self.__F,
             "overlap": self.__S,
             "kinetic": self.__T,
@@ -172,7 +178,9 @@ class DFT():
 
             # electron interaction terms
             "hartree": self.__J,
+            "J": self.__J,           # compatibility alias for Hartree matrix
             "xc": self.__XC,
+            "XC": self.__XC,         # compatibility alias for XC matrix
 
             # energies (explicit)
             "ex": self.__Ex,
@@ -215,8 +223,9 @@ class DFT():
         ndarray
             Electron density scalar field (:math:`N \\times 1` array)
         """
-        if len(spoints.shape) != 2:
-            raise Exception('Grid points need to be supplied as a Nx3 array.')
+        spoints = np.asarray(spoints)
+        if spoints.ndim != 2 or spoints.shape[1] != 3:
+            raise ValueError('Grid points need to be supplied as a Nx3 array.')
 
         return self.__molgrid.get_density_at_points(spoints, self.__P)
     
@@ -234,8 +243,9 @@ class DFT():
         ndarray
             Electron density gradient vector field (:math:`N \\times 3` array)
         """
-        if len(spoints.shape) != 2:
-            raise Exception('Grid points need to be supplied as a Nx3 array.')
+        spoints = np.asarray(spoints)
+        if spoints.ndim != 2 or spoints.shape[1] != 3:
+            raise ValueError('Grid points need to be supplied as a Nx3 array.')
 
         return self.__molgrid.get_gradient_at_points(spoints, self.__P)
     
@@ -298,9 +308,9 @@ class DFT():
                     # terminate self-convergence cycle
                     if verbose:
                         print("Stopping SCF cycle, convergence reached.")
-                        
-                        # update density matrix from last found coefficient matrix
-                        self.__P = self.__calculate_P()
+
+                    # update density matrix from last found coefficient matrix
+                    self.__P = self.__calculate_P()
                     break
 
         return self.get_data()
@@ -355,8 +365,10 @@ class DFT():
             self.__nshells = {}
             for a in attypes:
                 self.__nshells[a] = ATOM_NSHELLS[a]
-        else:
+        elif isinstance(nshells, Mapping):
             self.__nshells = nshells
+        else:
+            self.__nshells = {a: nshells for a in attypes}
 
         # build dictionary of number of angular points (for Lebedev grid) per
         # atom type
@@ -364,16 +376,20 @@ class DFT():
             self.__nangpts = {}
             for a in attypes:
                 self.__nangpts[a] = 50 if a == 'H' else 110
-        else:
+        elif isinstance(nangpts, Mapping):
             self.__nangpts = nangpts
+        else:
+            self.__nangpts = {a: nangpts for a in attypes}
 
         # set lmax values based on number of angular points
         if lmax is None:
             self.__lmax = {}
             for k,v in self.__nangpts.items():
                 self.__lmax[k] = LMAX_NANGPTS[v]
-        else:
+        elif isinstance(lmax, Mapping):
             self.__lmax = lmax
+        else:
+            self.__lmax = {a: lmax for a in attypes}
 
     def __iterate(self, niter, giis=True, mix=0.9):
         r"""
@@ -482,7 +498,7 @@ class DFT():
         self-consistent-field procedure
         """
         # construct basis functions and nuclei
-        if issubclass(type(self.__basis), str): # if a basis set name is given
+        if isinstance(self.__basis, str): # if a basis set name is given
             self.__cgfs, self.__nuclei = self.__mol.build_basis(self.__basis)
         else: # either assume a list of CGFs objects is given
             self.__cgfs = self.__basis

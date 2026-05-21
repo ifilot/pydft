@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Molecular Becke grid construction and grid-based DFT matrix assembly."""
 
+from __future__ import annotations
+
 import numpy as np
 from pyqint import PyQInt, CGF
 import time
@@ -14,6 +16,7 @@ from .atomicgrid import AtomicGrid, job_build_atomic_grid
 from .spherical_harmonics import job_compute_l
 from .data import BSRADII
 from .data import ATCHARGE
+from .data import ATOM_NSHELLS, LMAX_NANGPTS
 
 import numpy.typing as npt
 from typing import Tuple
@@ -39,9 +42,9 @@ class MolecularGrid:
     def __init__(self, 
                  atoms:list[AtomEntry], 
                  cgfs:list[CGF], 
-                 nshells: Mapping[str, int],
-                 nangpts: Mapping[str, int],
-                 lmax: Mapping[str, int] | None = None,
+                 nshells: Mapping[str, int] | int | None = None,
+                 nangpts: Mapping[str, int] | int | None = None,
+                 lmax: Mapping[str, int] | int | None = None,
                  fdpts:int=7,
                  functional:str='svwn5',
                  interpolation_method='CubicStencil'):
@@ -55,12 +58,15 @@ class MolecularGrid:
         cgfs : list[CGF]
             List of contracted Gaussian functions defining the atomic orbital
             basis set.
-        nshells : Mapping[str, int]
-            Number of radial integration shells per atomic species.
-        nangpts : Mapping[str, int]
+        nshells : Mapping[str, int] or int, optional
+            Number of radial integration shells per atomic species. A scalar
+            value is applied to all atom types. If not provided, element-based
+            defaults are used.
+        nangpts : Mapping[str, int] or int, optional
             Number of angular integration points per atomic species. The values
-            must correspond to supported Lebedev grid sizes.
-        lmax : Mapping[str, int], optional
+            must correspond to supported Lebedev grid sizes. A scalar value is
+            applied to all atom types.
+        lmax : Mapping[str, int] or int, optional
             Maximum angular momentum quantum number per atomic species used in
             the spherical harmonic projection. If not provided, :code:`lmax` is
             determined automatically from the number of angular points.
@@ -81,14 +87,62 @@ class MolecularGrid:
         # set properties
         self.__atoms = atoms
         self.__nelec = np.sum([ATCHARGE[at[0]] for at in self.__atoms])
-        self.__lmax = lmax
         self.__fdpts = fdpts
-        self.__nshells = nshells
-        self.__nangpts = nangpts
+        attypes = sorted({str(atom[0]) for atom in atoms})
+        self.__nshells = self.__expand_grid_setting(
+            nshells,
+            attypes,
+            lambda atom_type: ATOM_NSHELLS[atom_type]
+        )
+        self.__nangpts = self.__expand_grid_setting(
+            nangpts,
+            attypes,
+            lambda atom_type: 50 if atom_type == 'H' else 110
+        )
+        self.__lmax = self.__expand_grid_setting(
+            lmax,
+            attypes,
+            lambda atom_type: LMAX_NANGPTS[self.__nangpts[atom_type]]
+        )
         self.__basis = cgfs
         self.__functionals = Functionals(functional)
         self.__is_initialized = False
         self.__interpolation_method = interpolation_method
+
+    @staticmethod
+    def __expand_grid_setting(setting, atom_types, default_factory):
+        """
+        Normalize scalar, mapping, or missing grid settings to a dictionary.
+        """
+        if isinstance(setting, Mapping):
+            expanded = {}
+            for atom_type in atom_types:
+                if atom_type in setting:
+                    expanded[atom_type] = setting[atom_type]
+                else:
+                    expanded[atom_type] = default_factory(atom_type)
+            return expanded
+
+        if setting is None:
+            return {
+                atom_type: default_factory(atom_type)
+                for atom_type in atom_types
+            }
+
+        return {
+            atom_type: setting
+            for atom_type in atom_types
+        }
+
+    @staticmethod
+    def __stack_if_uniform(arrays):
+        """
+        Return a stacked array when shapes match, otherwise keep a list.
+        """
+        try:
+            return np.stack(arrays)
+        except ValueError:
+            return arrays
     
     def initialize(self):
         """
@@ -263,22 +317,23 @@ class MolecularGrid:
         """
         return [atgrid.get_gradient() for atgrid in self.__atomgrids]
 
-    def get_rho_lm_atoms(self) -> np.array:
+    def get_rho_lm_atoms(self) -> np.ndarray | list[np.ndarray]:
         """
         Get the electron density projected onto spherical harmonics per atom
 
         Returns
         -------
-        np.array
-            :math:`\\rho_{n,lm}` where :math:`n` loops over the atoms and the
-            pairs :math:`lm` over the spherical harmonics
+        np.ndarray or list[np.ndarray]
+            Per-atom arrays of :math:`\\rho_{n,lm}` coefficients. A single
+            stacked array is returned when all atomic grids have the same shape;
+            otherwise a list is returned.
         """
-        rho_lm = np.ndarray((len(self.__atoms), self.__nshells, (self.__lmax+1)**2))
-        
-        for i,at in enumerate(self.__atomgrids):
-            rho_lm[i,:,:] = (at.get_rho_lm().T * at.get_radial_grid()**2).T
-            
-        return rho_lm
+        rho_lm_atoms = []
+
+        for at in self.__atomgrids:
+            rho_lm_atoms.append((at.get_rho_lm().T * at.get_radial_grid()**2).T)
+
+        return self.__stack_if_uniform(rho_lm_atoms)
 
     def get_atomic_grid(self, i:int) -> AtomicGrid:
         """
@@ -324,27 +379,27 @@ class MolecularGrid:
         coefficients and hence for the back-transformation, we should *not*
         multiply with the Becke weights
         """
-        # get spherical harmonic expansion coefficients per atomic grid
-        ngpts = self.__nshells * self.__nangpts # gridpoints per atom
-        rho_lm = np.ndarray((len(self.__atoms), self.__nshells, (self.__lmax+1)**2))
-        
-        for i,at in enumerate(self.__atomgrids):
-            rho_lm[i,:,:] = at.get_rho_lm()
-            
-        # reshape the rho_lm array such that spherical harmonic coefficients
-        # are set for each grid point and only store the coefficients for
-        # each atomic grid associated with its own atom
-        rho_lm_gpts = np.ndarray((len(self.__atoms), (self.__lmax+1)**2, ngpts))
-        ylm = np.zeros_like(rho_lm_gpts)
-        for i,at in enumerate(self.__atomgrids):
-            for j in range(0, (self.__lmax+1)**2):
-                rho_lm_gpts[i,j,:] = np.outer(rho_lm[i,:,j],np.ones(self.__nangpts)).flatten()
-                ylm[i,j,:] = self.__ylmgpts[i,j,i*ngpts:(i+1)*ngpts]
-    
-        return np.einsum('ijk,ijk,ik', rho_lm_gpts,
-                                       ylm,
-                                       np.array([an.get_weights() for an in self.__atomgrids]),
-                                       optimize=True)
+        nel = 0.0
+        offset = 0
+
+        for i, at in enumerate(self.__atomgrids):
+            rho_lm = at.get_rho_lm()
+            nangpts = len(at.get_weights_angular_points())
+            ngpts = at.get_nr_pts()
+            nlm = rho_lm.shape[1]
+
+            # Expand radial rho_lm values back onto the angular grid associated
+            # with this atom only.
+            rho_lm_gpts = np.repeat(rho_lm.T, nangpts, axis=1)
+            ylm = self.__ylmgpts[i][:nlm, offset:offset + ngpts]
+            nel += np.einsum('jk,jk,k',
+                             rho_lm_gpts,
+                             ylm,
+                             at.get_weights(),
+                             optimize=True)
+            offset += ngpts
+
+        return nel
     
     def calculate_dfa_nuclear_attraction_local(self) -> float:
         """
@@ -387,18 +442,23 @@ class MolecularGrid:
         float
             Total coulombic repulsion (Hartree)
         """
-        # for each grid point, collect the spherical harmonic expansion coefficients
-        # of the hartree potential for all the atoms
-        ulmgpts = np.ndarray((len(self.__atoms), (self.__lmax+1)**2, len(self.__rgridpoints[0])))
-        for i,at in enumerate(self.__atomgrids):
-            ulmgpts[i,:,:] = at.calculate_interpolated_ulm()
-        
-        # for each grid point determine the Hartree potential from the 
+        # for each grid point, collect the spherical harmonic expansion
+        # coefficients of the Hartree potential for all the atoms
+        ulmgpts = [
+            at.calculate_interpolated_ulm(self.__rgridpoints[i])
+            for i, at in enumerate(self.__atomgrids)
+        ]
+
+        # for each grid point determine the Hartree potential from the
         # spherical harmonic coefficients with respect to each atomic center
-        self.__ugpts = np.einsum('ijk,ik,ijk->k', ulmgpts, 
-                                                  self.__rigridpoints, 
-                                                  self.__ylmgpts,
-                                                  optimize=True)
+        self.__ugpts = np.sum([
+            np.einsum('jk,k,jk->k',
+                      ulmgpts[i],
+                      self.__rigridpoints[i],
+                      self.__ylmgpts[i],
+                      optimize=True)
+            for i in range(len(self.__atoms))
+        ], axis=0)
         
         return 0.5 * np.einsum('i,i,i', self.__ugpts, 
                                         np.array([an.get_density() for an in self.__atomgrids]).flatten(),
@@ -443,7 +503,7 @@ class MolecularGrid:
         elif self.__interpolation_method == 'CubicStencil':
             ulmgpts = [at.calculate_interpolated_ulm_stencil() for at in self.__atomgrids]
         else:
-            raise Exception('Unknown interpolation method')
+            raise ValueError('Unknown interpolation method')
         timestats['ulm_interpolation'] = time.perf_counter() - st
 
         # for each grid point determine the Hartree potential from the 
@@ -522,9 +582,6 @@ class MolecularGrid:
         # calculate exchange energy
         ex = np.einsum('i,i,i', self.__mgw, fx, dens)
         
-        # build matrix and pre-calculate weights
-        X = np.zeros((len(self.__basis), len(self.__basis)))
-        
         # exchange parameters
         X = np.einsum('k,ik,jk,k->ij', vfx,
                                        self.__fullgrid_amplitudes,
@@ -563,10 +620,7 @@ class MolecularGrid:
         # calculate correlation energy
         ec = np.einsum('i,i,i', self.__mgw, fc, dens)
         
-        # build matrix and pre-calculate weights
-        C = np.zeros((len(self.__basis), len(self.__basis)))
-        
-        # exchange parameters
+        # correlation parameters
         C = np.einsum('k,ik,jk,k->ij', vfc,
                                        self.__fullgrid_amplitudes,
                                        self.__fullgrid_amplitudes,
@@ -603,6 +657,35 @@ class MolecularGrid:
                               optimize=True)
         return gga + gga.T
 
+    def __validate_points(self, spoints:np.ndarray) -> np.ndarray:
+        """
+        Validate and normalize an arbitrary set of Cartesian sampling points.
+        """
+        spoints = np.asarray(spoints)
+        if spoints.ndim != 2 or spoints.shape[1] != 3:
+            raise ValueError('Grid points need to be supplied as a Nx3 array.')
+        return spoints
+
+    def __basis_amplitudes_at_points(self, spoints:np.ndarray) -> np.ndarray:
+        """
+        Evaluate every basis-function amplitude at arbitrary sampling points.
+        """
+        spoints = self.__validate_points(spoints)
+        amps = np.empty((len(self.__basis), len(spoints)))
+        for i, cgf in enumerate(self.__basis):
+            amps[i,:] = np.array([cgf.get_amp(p) for p in spoints])
+        return amps
+
+    def __basis_gradients_at_points(self, spoints:np.ndarray) -> np.ndarray:
+        """
+        Evaluate every basis-function gradient at arbitrary sampling points.
+        """
+        spoints = self.__validate_points(spoints)
+        grads = np.empty((len(self.__basis), len(spoints), 3))
+        for i, cgf in enumerate(self.__basis):
+            grads[i,:,:] = np.array([cgf.get_grad(p) for p in spoints])
+        return grads
+ 
     def get_density_at_points(self, 
                               spoints:np.ndarray, 
                               P:np.ndarray) -> np.array:
@@ -625,11 +708,7 @@ class MolecularGrid:
             Electron density specified at grid points :math:`(N \\times 1)`
             with :math:`N` the number of grid points.
         """
-        # build the amplitudes at the specified points
-        amps = np.ndarray((len(self.__basis), len(spoints)))
-        for i,cgf in enumerate(self.__basis):
-            amps[i,:] = np.array([cgf.get_amp(p) for p in spoints])
-        
+        amps = self.__basis_amplitudes_at_points(spoints)
         dens = np.einsum('ik,ij,jk->k', amps, P, amps, optimize=True)
         
         return dens
@@ -655,11 +734,7 @@ class MolecularGrid:
             Molecular orbital amplitude specified at grid points
             :math:`(N \\times 1)` with :math:`N` the number of grid points.
         """
-        # build the amplitudes at the specified points
-        amps = np.ndarray((len(self.__basis), len(spoints)))
-        for i,cgf in enumerate(self.__basis):
-            amps[i,:] = np.array([cgf.get_amp(p) for p in spoints])
-        
+        amps = self.__basis_amplitudes_at_points(spoints)
         wfamp = np.einsum('ik,i->k', amps, c, optimize=True)
         
         return wfamp
@@ -686,12 +761,8 @@ class MolecularGrid:
             Electron density gradients at grid points :math:`(N \\times 3)` 
             with :math:`N` the number of grid points
         """
-        # build the amplitudes at the specified points
-        amps = np.ndarray((len(self.__basis), len(spoints)))
-        grads = np.ndarray((len(self.__basis), len(spoints), 3))
-        for i,cgf in enumerate(self.__basis):
-            amps[i,:] = np.array([cgf.get_amp(p) for p in spoints])
-            grads[i,:,:] = np.array([cgf.get_grad(p) for p in spoints])
+        amps = self.__basis_amplitudes_at_points(spoints)
+        grads = self.__basis_gradients_at_points(spoints)
         
         #
         # note that the 'ij' derivative component is equal
@@ -706,8 +777,7 @@ class MolecularGrid:
     def calculate_coulomb_potential_at_points(self, 
                                               pts:np.ndarray) -> np.ndarray:
         r"""
-        Collect the spherical harmonic expansion coefficients of the hartree 
-        potential for all the atoms at the grid points
+        Calculate the Hartree (Coulomb) potential at arbitrary points.
 
         Parameters
         ----------
@@ -718,20 +788,36 @@ class MolecularGrid:
         Returns
         -------
         np.array
-            Coulomb potential at grid points :math:`(\left[l_{\textrm{max}}+1\right]^{2} \times N)` 
-            with :math:`N` the number of grid points
+            Coulomb potential at grid points :math:`(N \times 1)` with
+            :math:`N` the number of grid points.
         """
-        # for each grid point, 
-        ulmgpts = np.zeros(((self.__lmax+1)**2, len(pts)))
-        for i,at in enumerate(self.__atomgrids):
-            rgridpts = np.linalg.norm(pts - self.__atoms[i][1], axis=1)
-            igpts = 1.0 / rgridpts
-            val = at.calculate_interpolated_ulm_at_points(rgridpts)
-            for j in range(0, len(val)):
-                val[j,:] *= igpts
-            ulmgpts += val
-        
-        return ulmgpts
+        pts = np.asarray(pts)
+        if pts.ndim != 2 or pts.shape[1] != 3:
+            raise ValueError('Grid points need to be supplied as a Nx3 array.')
+
+        potential = np.zeros(len(pts))
+        for atom, atgrid in zip(self.__atoms, self.__atomgrids):
+            relpts = pts - atom[1]
+            rgridpts = np.linalg.norm(relpts, axis=1)
+            if np.any(rgridpts == 0):
+                raise ValueError('Coulomb potential is singular at an atomic center.')
+
+            theta = np.arctan2(relpts[:,1], relpts[:,0])
+            z_over_r = np.divide(relpts[:,2], rgridpts)
+            phi = np.arccos(np.clip(z_over_r, -1.0, 1.0))
+
+            ulm = atgrid.calculate_interpolated_ulm_at_points(rgridpts)
+            ylm = np.vstack([
+                job_compute_l((l, theta, phi))
+                for l in range(atgrid.get_lmax() + 1)
+            ])
+            potential += np.einsum('jk,jk,k->k',
+                                   ulm,
+                                   ylm,
+                                   1.0 / rgridpts,
+                                   optimize=True)
+
+        return potential
 
     def get_exchange_potential_at_points(self, 
                                          pts:np.ndarray, 
@@ -902,7 +988,7 @@ class MolecularGrid:
         # efficiently
         st = time.perf_counter()
         requests = list({
-            (self.__lmax[atom[0]], self.__nangpts[atom[0]])
+            (self.__lmax[str(atom[0])], self.__nangpts[str(atom[0])])
             for atom in self.__atoms
         })
         SphericalHarmonicsCache.precache_bulk(requests)
@@ -913,9 +999,9 @@ class MolecularGrid:
         self.__atomgrids = []
         for atom in self.__atoms:
             self.__atomgrids.append(AtomicGrid(atom, 
-                                               self.__nshells[atom[0]], 
-                                               self.__nangpts[atom[0]],
-                                               self.__lmax[atom[0]],
+                                               self.__nshells[str(atom[0])], 
+                                               self.__nangpts[str(atom[0])],
+                                               self.__lmax[str(atom[0])],
                                                self.__fdpts)
                                     )
         self.construct_times['atomic_grids'] = time.perf_counter() - st
@@ -1003,8 +1089,8 @@ class MolecularGrid:
         st = time.perf_counter()
         self.__theta_gridpoints = np.arctan2(self.__ygridpoints,        # azimuthal
                                              self.__xgridpoints)
-        self.__phi_gridpoints = np.arccos(np.divide(self.__zgridpoints, # polar
-                                                    self.__rgridpoints))
+        z_over_r = np.divide(self.__zgridpoints, self.__rgridpoints)
+        self.__phi_gridpoints = np.arccos(np.clip(z_over_r, -1.0, 1.0)) # polar
         self.construct_times['cartesian_solid_angle_projection'] = time.perf_counter() - st
 
         # calculate the nuclear potential at each grid point due to the other nuclei            

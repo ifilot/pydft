@@ -34,7 +34,7 @@ class Functionals:
         }
         
         if functional not in functionals.keys():
-            raise Exception('Illegal XC-functional requested.')
+            raise ValueError('Illegal XC-functional requested.')
         else:
             # store exchange and correlation functional
             self.__xf = functionals[functional][0]
@@ -233,7 +233,7 @@ class Functionals:
         """
         # use finite difference discretization to approximate result
         dx = 1e-5
-        return (self.pbe_x_deriv_simplified(rho + dx, gamma) - self.pbe_x_deriv_simplified(rho - dx, gamma)) / (2. * dx)
+        return (self.__pbe_x(rho + dx, gamma) - self.__pbe_x(rho - dx, gamma)) / (2. * dx)
 
     def __pbe_c(self, rho, gamma):
         """

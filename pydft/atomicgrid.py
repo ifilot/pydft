@@ -57,9 +57,9 @@ class AtomicGrid:
         
         # perform some parameter checking
         if self.__fdpts < 3:
-            raise Exception('Number of grid points in stencil must at least be 3')
+            raise ValueError('Number of grid points in stencil must at least be 3')
         if self.__fdpts % 2 != 1:
-            raise Exception('Only odd number of grid points are allowed')
+            raise ValueError('Only odd number of grid points are allowed')
         
         # set coefficients and parameters
         self.__set_bragg_slater_radius()
@@ -163,25 +163,16 @@ class AtomicGrid:
         """
         return self.__ylm
 
-    # def calculate_interpolated_ulm_at_points(self, rpoints):
-    #     """
-    #     Calculate interpolated Hartree potential expansion coefficients
-    #     for all points r in the array rr
-    #     """
-    #     # build cubic interpolation
-    #     ulm_splines = []
-    #     rr = np.flip(self.__rr)
-    #     for i in range((self.__lmax+1)**2):
-    #         dydx = self.__finite_difference_derivative(rr, np.flip(self.__ulm[:,i]))
-    #         ulm_splines.append(CubicHermiteSpline(rr, np.flip(self.__ulm[:,i]), dydx))
+    def calculate_interpolated_ulm_at_points(self, rpoints):
+        """
+        Interpolate Hartree-potential coefficients at arbitrary radii.
 
-    #     ulmintp = np.zeros((len(ulm_splines), len(rr)))
-                
-    #     # loop over lm pairs and interpolate value for Ulm at points rr
-    #     for i in range((self.__lmax+1)**2):
-    #         ulmintp[i,:] = ulm_splines[i](rpoints)
-
-    #     return ulmintp
+        This method is a compatibility wrapper around
+        :meth:`calculate_interpolated_ulm`, which builds cubic splines directly
+        for the requested radii. For repeated evaluations on the fixed molecular
+        grid, :meth:`calculate_interpolated_ulm_stencil` is faster.
+        """
+        return self.calculate_interpolated_ulm(rpoints)
 
     def calculate_interpolated_ulm_stencil(self):
         """
