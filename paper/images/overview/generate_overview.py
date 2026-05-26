@@ -781,8 +781,8 @@ def build():
     for i, (title, kind, sub) in enumerate(
         [
             ("PyQInt", "pyqint", "analytic integrals"),
-            ("NumPy", "numpy", "arrays"),
-            ("PyLebedev", "pylebedev", "angular rules"),
+            ("NumPy/SciPy", "numpy", "arrays, harmonics"),
+            ("PyLebedev", "pylebedev", "angular quadrature"),
         ]
     ):
         x = right_x + 2.0 + i * 13.4
@@ -888,7 +888,8 @@ def build():
     row4_top = row4_y + row_h
     arrow(ax, diamond_x, diamond_y - diamond_h / 2, diamond_x, row4_top + 0.1, color=PAL.green, lw=2.0)
     badge(ax, 35.0, diamond_y - 0.1, "No", "#c52020", fc="#fff5f5", w=4.8, h=2.0)
-    badge(ax, diamond_x, row4_top + row_gap / 2, "Yes", PAL.green, fc="#f0faf4", w=5.2, h=2.0)
+    yes_y = 0.5 * (diamond_y - diamond_h / 2 + row4_top + 0.1)
+    badge(ax, diamond_x, yes_y, "Yes", PAL.green, fc="#f0faf4", w=5.2, h=2.0)
 
     # Layer 4
     output_items = [
