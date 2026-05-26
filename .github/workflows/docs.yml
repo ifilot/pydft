@@ -28,7 +28,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v6
         with:
-          python-version: "3.13"
+          python-version: "3.12"
           cache: pip
 
       - name: Install dependencies
@@ -37,6 +37,7 @@ jobs:
           python -m pip install -e .
           python -m pip install \
             sphinx-rtd-theme \
+            sphinxcontrib-bibtex \
             sphinxcontrib-tikz \
             pydata-sphinx-theme \
             sphinx_design \
@@ -49,7 +50,7 @@ jobs:
 
       - name: Build documentation
         run: |
-          sphinx-build -b html docs docs/_build/html
+          sphinx-build -b html -n -W --keep-going docs docs/_build/html
           touch docs/_build/html/.nojekyll
 
       - name: Upload GitHub Pages artifact
