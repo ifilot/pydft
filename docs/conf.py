@@ -13,7 +13,12 @@
 import os
 import sys
 sys.path.insert(0, os.path.abspath('..'))
-import sphinx_rtd_theme
+
+try:
+    import sphinx_rtd_theme
+    _has_rtd_theme = True
+except ImportError:
+    _has_rtd_theme = False
 
 # -- Project information -----------------------------------------------------
 
@@ -30,12 +35,48 @@ author = 'Ivo Filot'
 extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.autosectionlabel',
-    'sphinx_rtd_theme',
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'sphinxcontrib.bibtex'
+]
+if _has_rtd_theme:
+    extensions.append('sphinx_rtd_theme')
+
+autodoc_mock_imports = [
+    'matplotlib',
+    'mpl_toolkits',
+    'numba',
+    'numpy',
+    'numpy.typing',
+    'pylebedev',
+    'pyqint',
+    'pytessel',
+    'scipy',
+    'scipy.interpolate',
+    'scipy.special',
 ]
 
 suppress_warnings = ['autosectionlabel.*']
+
+bibtex_bibfiles = ['../paper/paper.bib']
+bibtex_reference_style = 'author_year'
+
+# Keep nitpicky builds focused on PyDFT cross-references. Autodoc sees several
+# external dependency types and NumPy-style aliases that do not have local
+# inventories in this documentation set.
+nitpick_ignore_regex = [
+    ('py:class', r'pyqint\..*'),
+    ('py:class', r'collections\.abc\.Mapping'),
+    ('py:class', r'numpy\..*'),
+    ('py:class', r'np\..*'),
+    ('py:class', r'ndarray'),
+    ('py:class', r'array_like'),
+    ('py:class', r'iterable'),
+    ('py:class', r'optional'),
+    ('py:class', r'lmax'),
+    ('py:class', r'nangpts'),
+    ('py:mod', r'pylebedev'),
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -51,7 +92,7 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = 'sphinx_rtd_theme'
+html_theme = 'sphinx_rtd_theme' if _has_rtd_theme else 'alabaster'
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,

@@ -1,11 +1,136 @@
-.tight-table td {
-    white-space: normal !important;
+:root {
+    --pydft-accent: #1292b3;
+    --pydft-accent-dark: #0a5e73;
+    --pydft-accent-soft: #def4fa;
+    --pydft-border: #d8e8ee;
+    --pydft-ink: #24343a;
+    --pydft-muted: #667780;
+}
+
+.wy-nav-content {
+    max-width: 1040px;
 }
 
 .wy-side-nav-search {
-    background: #def4fa;
+    background: var(--pydft-accent-soft);
+}
+
+.wy-side-nav-search > a,
+.wy-side-nav-search .version {
+    color: var(--pydft-accent-dark);
+}
+
+.wy-side-nav-search input[type="text"] {
+    border-color: #b8d9e2;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .icon.icon-home {
-    color: #1292b3;
+    color: var(--pydft-accent);
+}
+
+.wy-menu-vertical a:hover {
+    background-color: #eef8fb;
+    color: var(--pydft-accent-dark);
+}
+
+.rst-content h1,
+.rst-content h2,
+.rst-content h3 {
+    color: var(--pydft-ink);
+}
+
+.rst-content h2 {
+    border-bottom: 1px solid var(--pydft-border);
+    padding-bottom: 0.35rem;
+}
+
+.rst-content .contents {
+    background: #f7fbfc;
+    border: 1px solid var(--pydft-border);
+    border-radius: 0;
+    padding: 0.75rem 1rem;
+    margin: 1rem 0 1.5rem;
+}
+
+.rst-content .contents > .topic-title {
+    color: var(--pydft-accent-dark);
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+}
+
+.rst-content div[class^="highlight"],
+.rst-content pre.literal-block {
+    border: 1px solid var(--pydft-border);
+    border-radius: 0;
+    margin: 1rem 0 1.5rem;
+}
+
+.rst-content div[class^="highlight"] pre,
+.rst-content pre.literal-block {
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+.rst-content code.literal {
+    background: #f2f7f9;
+    border: 1px solid #dcebef;
+    color: #23414d;
+    padding: 0.08rem 0.25rem;
+}
+
+.rst-content figure,
+.rst-content div.figure {
+    margin: 1.75rem auto 2rem;
+    text-align: center;
+}
+
+.rst-content figure img,
+.rst-content div.figure img,
+.rst-content p > img {
+    background: #fff;
+    border: 1px solid var(--pydft-border);
+    border-radius: 0;
+    max-width: min(100%, 780px);
+    padding: 10px;
+}
+
+.rst-content img.no-frame {
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+    padding: 0;
+}
+
+.rst-content figure figcaption,
+.rst-content div.figure .caption {
+    color: var(--pydft-muted);
+    font-size: 0.92rem;
+    line-height: 1.45;
+    margin-top: 0.65rem;
+}
+
+.rst-content table.docutils {
+    border: 1px solid var(--pydft-border);
+    border-collapse: collapse;
+    border-spacing: 0;
+}
+
+.rst-content table.docutils th {
+    background: #e8f6fa;
+    color: var(--pydft-accent-dark);
+    font-weight: 700;
+}
+
+.rst-content table.docutils td,
+.rst-content table.docutils th {
+    padding: 0.65rem 0.8rem;
+    vertical-align: top;
+    white-space: normal !important;
+}
+
+.tight-table td {
+    white-space: normal !important;
 }

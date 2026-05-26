@@ -1,4 +1,4 @@
-name: Deployment of documentation
+name: Documentation
 
 on:
   push:
@@ -7,40 +7,74 @@ on:
   pull_request:
     branches:
       - master
+  workflow_dispatch:
 
 permissions:
-  contents: write  # Grants write access to the repository contents
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   build:
-    name: Build and Deploy Sphinx Documentation
+    name: Build Sphinx documentation
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout Repository
-      uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v6
 
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: 3.13.1
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
 
-    - name: Install Dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install sphinx-rtd-theme \
-              sphinxcontrib-tikz \
-              pydata-sphinx-theme \
-              sphinx_design \
-              sphinx_subfigure \
-              myst_parser
-    - name: Build Documentation
-      run: |
-        cd docs
-        make html
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install \
+            sphinx-rtd-theme \
+            sphinxcontrib-bibtex \
+            sphinxcontrib-tikz \
+            pydata-sphinx-theme \
+            sphinx_design \
+            sphinx_subfigure \
+            myst_parser
 
-    - name: Deploy to GitHub Pages
-      uses: peaceiris/actions-gh-pages@v3
-      with:
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        publish_dir: docs/_build/html
+      - name: Configure GitHub Pages
+        if: github.event_name != 'pull_request'
+        uses: actions/configure-pages@v5
+
+      - name: Build documentation
+        run: |
+          sphinx-build -b html -n -W --keep-going docs docs/_build/html
+          touch docs/_build/html/.nojekyll
+
+      - name: Upload GitHub Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v4
+        with:
+          path: docs/_build/html
+
+  deploy:
+    name: Deploy to GitHub Pages
+    if: github.event_name != 'pull_request'
+    needs: build
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    steps:
+      - name: Deploy artifact
+        id: deployment
+        uses: actions/deploy-pages@v4

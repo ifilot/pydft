@@ -8,7 +8,10 @@ mol = MoleculeBuilder().from_name('benzene')
 cgfs, atoms = mol.build_basis('sto3g')
 
 # construct molecular grid
-molgrid = MolecularGrid(atoms, cgfs)
+molgrid = MolecularGrid([a for a in mol], cgfs, 
+                        nshells = {'C' : 32, 'H' : 32}, 
+                        nangpts = {'C' : 194, 'H' : 194}
+                        )
 
 # produce grid of sampling points to calculate the atomic
 # weight coefficients for

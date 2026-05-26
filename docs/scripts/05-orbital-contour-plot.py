@@ -7,11 +7,11 @@ def main():
     # perform DFT calculation on the CO molecule
     co = MoleculeBuilder().from_name("CO")
     dft = DFT(co, basis='sto3g')
-    en = dft.scf(1e-6, verbose=False)
+    res = dft.scf(1e-6, verbose=False)
     
     # grab molecular orbital energies and coefficients
-    orbc = dft.get_data()['C']
-    orbe = dft.get_data()['orbe']  
+    orbc = res['orbc']
+    orbe = res['orbe']
     
     # generate grid of points and calculate the electron density for these points
     sz = 4      # size of the domain

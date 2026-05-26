@@ -1,10 +1,5 @@
 import unittest
-import sys
-import os
 import numpy as np
-
-# add a reference to load the pyDFT module
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from pydft import MoleculeBuilder, MolecularGrid
 
@@ -19,7 +14,10 @@ class TestCustomBasisSet(unittest.TestCase):
         cgfs, atoms = mol.build_basis('sto3g')
         
         # construct molecular grid
-        molgrid = MolecularGrid(atoms, cgfs)
+        molgrid = MolecularGrid([at for at in mol], cgfs,
+                                nshells = {'B' : 32, 'F' : 32},
+                                nangpts = {'B' : 110, 'F' : 110},
+                                lmax = {'B' : 8, 'F' : 8})
         molgrid.initialize()
 
         ANGSTROM2BOHR = 1.88973
@@ -43,7 +41,10 @@ class TestCustomBasisSet(unittest.TestCase):
         cgfs, atoms = mol.build_basis('sto3g')
         
         # construct molecular grid
-        molgrid = MolecularGrid(atoms, cgfs)
+        molgrid = MolecularGrid([at for at in mol], cgfs,
+                                nshells = {'C' : 32, 'H' : 32},
+                                nangpts = {'C' : 110, 'H' : 110},
+                                lmax = {'C' : 8, 'H' : 8})
         molgrid.initialize()
 
         ANGSTROM2BOHR = 1.88973

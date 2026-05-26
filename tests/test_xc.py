@@ -1,10 +1,5 @@
 import unittest
-import sys
-import os
 import numpy as np
-
-# add a reference to load the pyDFT module
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from pydft import MoleculeBuilder, DFT
 
@@ -19,10 +14,10 @@ class TestXC(unittest.TestCase):
 
         # construct dft object
         dft = DFT(mol, basis='sto3g', functional='svwn5')
-        energy = dft.scf()
+        res = dft.scf()
 
-        answer = -2.809567
-        np.testing.assert_almost_equal(energy, answer, 4)
+        answer = -2.8081735181814724
+        np.testing.assert_almost_equal(res['energy'], answer, 4)
 
     def test_pbe(self):
         """
@@ -33,7 +28,7 @@ class TestXC(unittest.TestCase):
 
         # construct dft object
         dft = DFT(mol, basis='sto3g', functional='pbe')
-        energy = dft.scf()
+        res = dft.scf()
 
-        answer = -2.8301366521757787
-        np.testing.assert_almost_equal(energy, answer, 4)
+        answer = -2.8287483384734955
+        np.testing.assert_almost_equal(res['energy'], answer, 4)

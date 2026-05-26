@@ -7,11 +7,11 @@ from mpl_toolkits.axes_grid1 import make_axes_locatable
 # perform DFT calculation on the CO molecule
 co = MoleculeBuilder().from_name("CO")
 dft = DFT(co, basis='sto3g')
-en = dft.scf(1e-6, verbose=False)
+res = dft.scf(1e-6, verbose=False)
 
 # grab molecular orbital energies and coefficients
-orbc = dft.get_data()['C']
-orbe = dft.get_data()['orbe']  
+orbc = res['orbc']
+orbe = res['orbe']
 
 # generate grid of points and calculate the electron density for these points
 sz = 4      # size of the domain
@@ -29,8 +29,8 @@ gridpoints = gridpoints.reshape((-1,3))
 # grab a copy of the MolecularGrid object
 molgrid = dft.get_molgrid_copy()
 
-# construct exchange potential
-field = molgrid.get_correlation_potential_at_points(gridpoints, dft.get_data()['P'])
+# construct correlation potential
+field = molgrid.get_correlation_potential_at_points(gridpoints, res['density'])
 field = field.reshape((npts, npts))
 
 # plot field

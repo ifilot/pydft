@@ -12,14 +12,18 @@ PyDFT: pure-python density functional theory
 calculations using Gaussian Type Orbitals. 
 
 .. image:: _static/img/pydft_logo_full_512px.png
+   :width: 360px
+   :align: center
+   :class: no-frame
 
-:program:`PyDFT` currently supports LDA and PBE
-exchange-correlation functionals. The purpose of :program:`PyDFT` is mainly to
-serve as an educational tool to explain the inner workings of a DFT
-calculation. This program is not intended for professional calculations. It is
-not particularly fast nor offers a lot of features that more mature
-open-source of commercial packages offer. It does offer a unique insight into
-a working code and a considerable effort was made in documenting everything.
+The primary purpose of :program:`PyDFT` is to serve as an educational tool that
+illustrates the inner workings of a density-functional theory calculation.
+Currently, :program:`PyDFT` supports LDA and PBE exchange-correlation
+functionals. While it is not intended to replace mature open-source or
+commercial electronic-structure packages, care has been taken to achieve
+reasonable performance within the constraints of a Python implementation. In
+addition, a strong emphasis has been placed on code clarity and comprehensive
+documentation, providing detailed insight into a fully working DFT code.
 
 .. tip::
 
@@ -29,9 +33,9 @@ a working code and a considerable effort was made in documenting everything.
    <https://ifilot.pages.tue.nl/elements-of-electronic-structure-theory/>`_.
 
 :program:`PyDFT` has been developed at the Eindhoven University of Technology,
-Netherlands. :program:`PyDFT` and its development are hosted on `Github
+Netherlands. :program:`PyDFT` and its development are hosted on `GitHub
 <https://www.github.com/ifilot/pydft>`_.  Bugs and feature requests are ideally
-submitted via the `github issue tracker
+submitted via the `GitHub issue tracker
 <https://www.github.com/ifilot/pydft/issues>`_.
 
 .. toctree::
@@ -40,8 +44,15 @@ submitted via the `github issue tracker
 
    installation
    background
-   user_interface
-   api
+   building_molecules
+   electronic_structure_calculations
+   orbital_visualization
+   becke_grid_analysis
+   hartree_potential_analysis
+   scalar_field_analysis
+   api_reference
+   benchmarks
+   references
    community_guidelines
 
 Indices and tables

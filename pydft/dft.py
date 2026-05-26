@@ -1,127 +1,201 @@
 # -*- coding: utf-8 -*-
+"""High-level self-consistent field driver for educational DFT calculations."""
 
 from .moleculargrid import MolecularGrid
-from pyqint import PyQInt, Molecule, cgf
+from pyqint import PyQInt, Molecule, CGF
 import numpy as np
 import time
-from packaging import version
 from copy import deepcopy
+from collections.abc import Mapping
+from .data import ATOM_NSHELLS, LMAX_NANGPTS
 
 # couple of hardcoded variables for the DIIS algorithm
 SUBSPACE_LENGTH = 3
 SUBSPACE_START = 4
 
 class DFT():
+    """
+    Coordinate a complete Kohn-Sham density-functional theory calculation.
+
+    The :class:`DFT` object is the main entry point for users. It owns the
+    molecular geometry, the Gaussian basis functions, the numerical molecular
+    grid, and the matrices used in the self-consistent field (SCF) cycle. The
+    implementation intentionally keeps the SCF steps visible: one-electron
+    matrix construction, density-matrix formation, grid-based Hartree and
+    exchange-correlation terms, Fock matrix diagonalization, and convergence
+    acceleration are all represented by small methods.
+
+    Notes
+    -----
+    Calling :meth:`scf` returns a dictionary with matrices, energies, orbitals,
+    and timing data. This makes the object useful both for running calculations
+    and for inspecting the intermediate objects that appear in a DFT textbook.
+    """
+
     def __init__(self, 
                  mol:Molecule, 
-                 basis:str|list[cgf] = 'sto3g', 
+                 basis:str|list[CGF] = 'sto3g', 
                  functional:str = 'svwn5',
-                 nshells:int = 32,
-                 nangpts:int = 110,
-                 lmax:int = 8,
+                 nshells: Mapping[str, int] | None = None,
+                 nangpts: Mapping[str, int] | None = None,
+                 lmax: Mapping[str, int] | None = None,
                  fdpts:int=7,
-                 normalize:bool = True,
-                 parallel:bool = False):
+                 normalize:bool = True):
         """
-        Constructs the DFT class
+        Construct a density-functional theory (DFT) calculation object.
 
         Parameters
         ----------
         mol : Molecule
-            molecule
-        basis : str, optional
-            basis set, can be either a string or a list of cgf objects, by default 'sto3g'
+            Molecular system defining atoms, geometry, and total charge.
+        basis : str or list[CGF], optional
+            Atomic orbital basis set. This can be specified either as the name
+            of a built-in basis set or as an explicit list of contracted
+            Gaussian functions. The default is ``'sto3g'``.
         functional : str, optional
-            exchange-correlation function, valid options are :code:`swn5` 
-            and :code:`pbe`, by default 'svwn5'
-        nshells : int, optional
-            number of radial shells, by default 32
-        nangpts : int, optional
-            number of angular sampling points, by default 110
-        lmax : int, optional
-            maximum value of l in the spherical harmonic expansion, by default 8
-        fdpts: int, optional
-            number of grid point in finite difference scheme, by default 7
-        normalize: whether to perform intermediary normalization of the electron 
-            density
-        verbose : bool, optional
-            whether to provide verbose output, by default False
-        parallel : bool, optional
-            whether to use multiprocessing features (only for Linux), by default False
+            Exchange-correlation functional. Valid options are
+            :code:`svwn5` and :code:`pbe`. The default is ``'svwn5'``.
+        nshells : Mapping[str, int], optional
+            Number of radial integration shells per atomic species. If not
+            provided, default values are used based on the atomic row.
+        nangpts : Mapping[str, int], optional
+            Number of angular integration points per atomic species. The values
+            must correspond to supported Lebedev grid sizes. If not provided,
+            default values are used.
+        lmax : Mapping[str, int], optional
+            Maximum angular momentum quantum number per atomic species used in
+            the spherical harmonic expansion. If not provided, :code:`lmax` is
+            determined automatically from the number of angular points.
+        fdpts : int, optional
+            Number of grid points used in the finite-difference scheme. The
+            default is 7.
+        normalize : bool, optional
+            Whether to perform intermediate normalization of the electron
+            density during the self-consistent field procedure. The default
+            is ``True``.
         """
         self.__mol = mol
+        self.__calculate_grid_settings(nshells, nangpts, lmax)
         self.__integrator = PyQInt()
         self.__basis = basis
         self.__time_stats = {}
         self.__itermax = 100
-        self.__nshells = nshells
-        self.__nangpts = nangpts
         self.__fdpts = fdpts
-        self.__lmax = lmax
         self.__functional = functional
         self.__normalize = normalize
-        self.__parallel = parallel
         
         # keep track of time
         self.calctimes = {
             'density_hartree': [],
             'calculate_J': [],
             'calculate_XC': [],
+            'ulm_interpolation': [],
+            'build_hartree_field': [],
+            'build_repulsion_matrix': [],
         }
 
     def get_data(self) -> dict:
         """
-        Get relevant memory objects, only valid after successful SCF calculation
+        Return results of the SCF calculation.
+
+        This method is only valid after a successful SCF run. It returns a
+        dictionary containing all relevant physical quantities, matrices,
+        energies, and timing information. The returned data layout is shared
+        between PyQInt and PyDFT calculations to ensure consistent
+        post-processing.
 
         Returns
         -------
         dict
-            Dictionary containing relevant memory objects (see below)
-            
+            Dictionary containing SCF results and metadata.
+
         Notes
         -----
-        The dictionary contains the following elements:
-        
-        * :code:`S`: overlap matrix
-        * :code:`T`: kinetic energy matrix
-        * :code:`V`: nuclear attraction matrix
-        * :code:`C`: coefficient matrix
-        * :code:`J`: Hartree matrix
-        * :code:`P`: density matrix
-        * :code:`XC`: exchange-correlation matrix
-        * :code:`F`: Fock-matrix
-        * :code:`Exc`: exchange-correlation energy
-        * :code:`Ex`: exchange energy
-        * :code:`Ec`: correlation energy
-        * :code:`energies`: all energies
-        * :code:`energy`: last energy
-        * :code:`orbc`: coeffient matrix (duplicate)
-        * :code:`orbe`: molecular orbital eigenvalues
-        * :code:`enucrep`: electrostatic repulsion of the nuclei
-        * :code:`timedata`: computation time for various parts of the calculation
-        
+        The returned dictionary contains the following entries:
+
+        **System information**
+            * ``mol`` : Molecular object defining geometry and atoms
+            * ``nuclei`` : Nuclear positions and charges
+            * ``cgfs`` : Contracted Gaussian basis functions
+
+        **Energies**
+            * ``energy`` : Final total electronic energy
+            * ``energies`` : SCF energy history
+            * ``ekin`` : Electronic kinetic energy
+            * ``enuc`` : Electron-nuclear attraction energy
+            * ``enucrep`` : Nuclear-nuclear repulsion energy
+            * ``ex`` : Exchange energy
+            * ``ec`` : Correlation energy
+            * ``exc`` : Exchange-correlation energy
+
+        **Orbital quantities**
+            * ``orbc`` : Molecular orbital coefficient matrix
+            * ``C`` : Compatibility alias for ``orbc``
+            * ``orbe`` : Molecular orbital eigenvalues
+
+        **Matrices and operators**
+            * ``overlap`` : Overlap matrix
+            * ``kinetic`` : Kinetic energy matrix
+            * ``nuclear`` : Nuclear attraction matrix
+            * ``hcore`` : Core Hamiltonian matrix (T + V)
+            * ``density`` : Density matrix
+            * ``P`` : Compatibility alias for ``density``
+            * ``fock`` : Fock matrix
+            * ``hartree`` : Hartree (Coulomb) matrix
+            * ``J`` : Compatibility alias for ``hartree``
+            * ``xc`` : Exchange-correlation matrix (DFT only, ``None`` for HF)
+            * ``XC`` : Compatibility alias for ``xc``
+
+        **Timing information**
+            * ``time_stats`` : Dictionary with timing breakdowns
+                - ``construct`` : Grid and setup construction times
+                - ``scf`` : SCF iteration timings
         """
         data = {
-            'S' : self.__S,         # overlap matrix
-            'T' : self.__T,         # kinetic energy matrix
-            'V' : self.__V,         # nuclear attraction matrix
-            'C' : self.__C,         # coefficient matrix
-            'J' : self.__J,         # Hartree matrix
-            'P' : self.__P,         # density matrix
-            'XC' : self.__XC,       # exchange-correlation matrix
-            'F' : self.__F,         # Fock-matrix
-            'Exc': self.__Exc,      # exchange-correlation energy
-            'Ex': self.__Ex,        # exchange energy
-            'Ec': self.__Ec,        # correlation energy
-            'energies': self.__energies, # all energy
-            'energy': self.__energies[-1], # last energy
-            'orbc': self.__C,       # coeffient matrix (duplicate)
-            'orbe': self.__e,       # molecular orbital eigenvalues
-            'enucrep': self.__enuc, # electrostatic repulsion of the nuclei
-            
-            # also output computation times
-            'timedata': {'construct_times': self.__molgrid.construct_times,
-                         'calc_times': self.calctimes},
+            # system
+            "mol": self.__mol,
+            "nuclei": self.__nuclei,
+            "cgfs": self.__cgfs,
+            "nelec": self.__nelec,
+
+            # core results
+            "energy": self.__energies[-1],
+            "energies": self.__energies,
+
+            # orbital information
+            "orbc": self.__C,        # MO coefficients
+            "C": self.__C,           # compatibility alias for MO coefficients
+            "orbe": self.__e,        # MO eigenvalues
+
+            # density & operators
+            "density": self.__P,
+            "P": self.__P,           # compatibility alias for density matrix
+            "fock": self.__F,
+            "overlap": self.__S,
+            "kinetic": self.__T,
+            "nuclear": self.__V,
+            "hcore": self.__T + self.__V,
+
+            # electron interaction terms
+            "hartree": self.__J,
+            "J": self.__J,           # compatibility alias for Hartree matrix
+            "xc": self.__XC,
+            "XC": self.__XC,         # compatibility alias for XC matrix
+
+            # energies (explicit)
+            "ex": self.__Ex,
+            "ec": self.__Ec,
+            "exc": self.__Exc,
+            "enucrep": self.__enuc,
+            "ekin": np.einsum("ij,ji", self.__T, self.__P),
+            "enuc": np.einsum("ij,ji", self.__V, self.__P),
+            "erepe": np.einsum("ij,ji", self.__J, self.__P),
+
+            # timing
+            "time_stats": {
+                "construct": self.__molgrid.construct_times,
+                "scf": self.calctimes,
+            }
         }
         
         return data
@@ -149,8 +223,9 @@ class DFT():
         ndarray
             Electron density scalar field (:math:`N \\times 1` array)
         """
-        if len(spoints.shape) != 2:
-            raise Exception('Grid points need to be supplied as a Nx3 array.')
+        spoints = np.asarray(spoints)
+        if spoints.ndim != 2 or spoints.shape[1] != 3:
+            raise ValueError('Grid points need to be supplied as a Nx3 array.')
 
         return self.__molgrid.get_density_at_points(spoints, self.__P)
     
@@ -168,24 +243,36 @@ class DFT():
         ndarray
             Electron density gradient vector field (:math:`N \\times 3` array)
         """
-        if len(spoints.shape) != 2:
-            raise Exception('Grid points need to be supplied as a Nx3 array.')
+        spoints = np.asarray(spoints)
+        if spoints.ndim != 2 or spoints.shape[1] != 3:
+            raise ValueError('Grid points need to be supplied as a Nx3 array.')
 
         return self.__molgrid.get_gradient_at_points(spoints, self.__P)
     
-    def scf(self, tol:float=1e-5, verbose:bool=False) -> float:
+    def scf(self, tol:float=1e-5, verbose:bool=False) -> dict:
         """
-        Perform the self-consistent field procedure
+        Perform the self-consistent field procedure.
+
+        The SCF cycle repeatedly builds the density-dependent parts of the
+        Kohn-Sham matrix from the current density matrix, diagonalizes the
+        resulting Fock/Kohn-Sham matrix, and updates the density matrix until the
+        total energy changes by less than ``tol``. Early iterations use linear
+        mixing; later iterations use DIIS extrapolation when possible.
 
         Parameters
         ----------
         tol : float, optional
-            electronic convergence criterion, by default 1e-5
+            Electronic energy convergence criterion in Hartree. The default is
+            ``1e-5``.
+        verbose : bool, optional
+            If ``True``, print one line per SCF iteration showing the iteration
+            number, total energy, energy change, and elapsed time.
 
         Returns
         -------
-        float
-            total electronic energy (in Hartrees)
+        dict
+            Result dictionary as returned by :meth:`get_data`. The final total
+            energy is available as ``result['energy']``.
         """
         # construct stagnant matrices
         self.__setup()
@@ -197,12 +284,12 @@ class DFT():
         nitfin = 0
         ediff = 0
         for niter in range(0, self.__itermax):
-            start = time.time()
+            start = time.perf_counter()
             energy = self.__iterate(niter, 
                                     giis=True if nitfin == 0 else False,
                                     mix=0.9)
             self.__energies.append(energy)
-            stop = time.time()
+            stop = time.perf_counter()
             itertime = stop - start
             self.__time_stats['iterations'].append(itertime)
             
@@ -221,24 +308,32 @@ class DFT():
                     # terminate self-convergence cycle
                     if verbose:
                         print("Stopping SCF cycle, convergence reached.")
-                        
-                        # update density matrix from last found coefficient matrix
-                        self.__P = self.__calculate_P()
+
+                    # update density matrix from last found coefficient matrix
+                    self.__P = self.__calculate_P()
                     break
 
-        return energy
+        return self.get_data()
     
     def print_time_statistics(self):
+        """
+        Print a summary of time statistics
+        """
         print('-- Construction times --')
         print('Atomic grids:                                %.4f s' % self.__molgrid.construct_times['atomic_grids'])
+        print('Projection cart. coord. on solid angles:     %.4f s' % self.__molgrid.construct_times['cartesian_solid_angle_projection'])
         print('Fuzzy cell decomposition:                    %.4f s' % self.__molgrid.construct_times['fuzzy_cell_decomposition'])
         print('Spherical harmonics:                         %.4f s' % self.__molgrid.construct_times['spherical_harmonics'])
         print('Nuclear distance and potential:              %.4f s' % self.__molgrid.construct_times['nuclear_distance_and_potential'])
         print('Basis set amplitudes:                        %.4f s' % self.__molgrid.construct_times['basis_function_amplitudes'])
+        print('Spline construction:                         %.4f s' % self.__molgrid.construct_times['spline_construction'])
         print()
         print('-- Calculation times --')
         print('Classical e-e repulsion matrix (J):          %.4f s' % np.average(self.calctimes['calculate_J']))
-        print('Electron density and Hartree potential (U):  %.4f s' % np.average(self.calctimes['density_hartree']))
+        print('  - Ulm interpolation:                       %.4f s' % np.average(self.calctimes['ulm_interpolation']))
+        print('  - Build Hartree-field:                     %.4f s' % np.average(self.calctimes['build_hartree_field']))
+        print('  - Build repulsion matrix:                  %.4f s' % np.average(self.calctimes['build_repulsion_matrix']))
+        print('Building edens (rho) and Hartree pot (U):    %.4f s' % np.average(self.calctimes['density_hartree']))
         print('Exchange-correlation matrices (XC):          %.4f s' % np.average(self.calctimes['calculate_XC']))
     
     def get_construction_times(self) -> dict:
@@ -253,9 +348,69 @@ class DFT():
         """
         return self.__molgrid.construct_times
     
-    def __iterate(self, niter, giis=True, mix=0.9):
+    def __calculate_grid_settings(self, nshells, nangpts, lmax):
         """
-        Perform single-step iteration
+        Build a Mapping where the grid settings for each atom are set, unless
+        they are already provided by the user.
+
+        The lmax mapping can be inferred from nangpts, but the user may override
+        this.
+        """
+        # collect atom types
+        attypes = np.unique([a[0] for a in self.__mol])
+
+        # build dictionary of number of radial points (Gauss-Chebychev grid)
+        # per atom type
+        if nshells is None:
+            self.__nshells = {}
+            for a in attypes:
+                self.__nshells[a] = ATOM_NSHELLS[a]
+        elif isinstance(nshells, Mapping):
+            self.__nshells = nshells
+        else:
+            self.__nshells = {a: nshells for a in attypes}
+
+        # build dictionary of number of angular points (for Lebedev grid) per
+        # atom type
+        if nangpts is None:
+            self.__nangpts = {}
+            for a in attypes:
+                self.__nangpts[a] = 50 if a == 'H' else 110
+        elif isinstance(nangpts, Mapping):
+            self.__nangpts = nangpts
+        else:
+            self.__nangpts = {a: nangpts for a in attypes}
+
+        # set lmax values based on number of angular points
+        if lmax is None:
+            self.__lmax = {}
+            for k,v in self.__nangpts.items():
+                self.__lmax[k] = LMAX_NANGPTS[v]
+        elif isinstance(lmax, Mapping):
+            self.__lmax = lmax
+        else:
+            self.__lmax = {a: lmax for a in attypes}
+
+    def __iterate(self, niter, giis=True, mix=0.9):
+        r"""
+        Perform one SCF iteration.
+
+        Each iteration follows the Kohn-Sham workflow:
+
+        1. Use the current density matrix to build the electron density on the
+           molecular grid.
+        2. Solve for the grid-based Hartree potential and assemble the Coulomb
+           matrix :math:`\mathbf{J}`.
+        3. Evaluate the exchange-correlation functional and assemble the
+           exchange-correlation matrix.
+        4. Combine these pieces with the core Hamiltonian to form the Fock
+           matrix.
+        5. Transform to an orthonormal basis, diagonalize, back-transform the
+           molecular orbital coefficients, and form the next density matrix.
+
+        DIIS is used after the initial iterations to extrapolate a better Fock
+        matrix from previous residuals. If DIIS fails numerically, the code falls
+        back to linear mixing for that step.
         """
         # calculate J and XC matrices based on the current electron
         # density estimate as captured in the density matrix P
@@ -273,17 +428,17 @@ class DFT():
         # calculate J and XC matrices based on the current electron
         # density estimate as captured in the density matrix P
         if np.any(self.__P):
-            st = time.time()
+            st = time.perf_counter()
             self.__molgrid.build_density(self.__P, normalize=self.__normalize)
-            self.calctimes['density_hartree'].append(time.time() - st)
+            self.calctimes['density_hartree'].append(time.perf_counter() - st)
             
-            st = time.time()
+            st = time.perf_counter()
             self.__J = self.__calculate_J()
-            self.calctimes['calculate_J'].append(time.time() - st)
+            self.calctimes['calculate_J'].append(time.perf_counter() - st)
             
-            st = time.time()
+            st = time.perf_counter()
             self.__XC, self.__Exc = self.__calculate_XC()
-            self.calctimes['calculate_XC'].append(time.time() - st)
+            self.calctimes['calculate_XC'].append(time.perf_counter() - st)
             
 
         # calculate Fock matrix
@@ -343,21 +498,23 @@ class DFT():
         self-consistent-field procedure
         """
         # construct basis functions and nuclei
-        if issubclass(type(self.__basis), str): # if a basis set name is given
+        if isinstance(self.__basis, str): # if a basis set name is given
             self.__cgfs, self.__nuclei = self.__mol.build_basis(self.__basis)
         else: # either assume a list of CGFs objects is given
             self.__cgfs = self.__basis
             self.__nuclei = self.__mol.get_nuclei()
         
+        # set number of electrons
+        self.__nelec = np.sum([nucleus[1] for nucleus in self.__nuclei])
+
         # build molecular grid
-        self.__molgrid = MolecularGrid(self.__nuclei, 
+        self.__molgrid = MolecularGrid([at for at in self.__mol],
                                        self.__cgfs, 
                                        nshells=self.__nshells, 
                                        nangpts=self.__nangpts,
                                        lmax=self.__lmax,
                                        fdpts=self.__fdpts,
-                                       functional=self.__functional,
-                                       parallel=self.__parallel)
+                                       functional=self.__functional)
         self.__molgrid.initialize() # molecular grid uses late initialization
 
         # build one-electron matrices; because these matrices are Hermetian,
@@ -423,7 +580,12 @@ class DFT():
         Calculate the coulombic interaction matrix using the
         molecular grid
         """
-        return self.__molgrid.calculate_coulombic_matrix()
+        J, timestats = self.__molgrid.calculate_coulombic_matrix(True)
+        self.calctimes['ulm_interpolation'].append(timestats['ulm_interpolation'])
+        self.calctimes['build_hartree_field'].append(timestats['build_hartree_field'])
+        self.calctimes['build_repulsion_matrix'].append(timestats['build_repulsion_matrix'])
+
+        return J
     
     def __calculate_P(self):
         """
@@ -431,10 +593,9 @@ class DFT():
         """
         N = len(self.__cgfs)
         P = np.zeros_like(self.__S)
-        nelec = np.sum([nucleus[1] for nucleus in self.__nuclei])
         for i in range(0,N):
             for j in range(0,N):
-                for k in range(0,int(nelec/2)):
+                for k in range(0,int(self.__nelec//2)):
                     P[i,j] += 2.0 * self.__C[i,k] * self.__C[j,k]
                     
         return P

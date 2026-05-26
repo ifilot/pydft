@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+"""Exchange-correlation energy densities and potentials for PyDFT."""
 
 import numpy as np
 
@@ -7,28 +8,42 @@ class Functionals:
     Class holding all exchange-correlation functionals
     
     Note that all the functions ending in _deriv are the derivative
-    of the energy with respect to rho.
+    of the energy per particle with respect to rho.
     
     To calculate the potential, nu, one has to calculate
     deltaf/deltarho = df/drho * rho + f
     """
     def __init__(self, functional = 'svwn5'):
+        """
+        Select the exchange-correlation functional implementation.
+
+        Parameters
+        ----------
+        functional : {'svwn5', 'pbe'}, optional
+            ``'svwn5'`` combines Slater exchange with VWN5 correlation and is an
+            LDA functional. ``'pbe'`` selects the spin-unpolarized PBE GGA
+            exchange-correlation functional.
+        """
         functionals = {
-            'svwn5': [self.__slater, self.__vwn5, 
-                      self.__slater_deriv, self.__vwn5_deriv, False],
-            'pbe': [self.__pbe_x, self.__pbe_c, 
-                    self.__pbe_x_deriv, self.__pbe_c_deriv, True]
+            'svwn5': [self.__slater, self.__vwn5,
+                      self.__slater_deriv, self.__vwn5_deriv,
+                      None, None, False],
+            'pbe': [self.__pbe_x, self.__pbe_c,
+                    self.__pbe_x_deriv, self.__pbe_c_deriv,
+                    self.__pbe_x_deriv_sigma, self.__pbe_c_deriv_sigma, True]
         }
         
         if functional not in functionals.keys():
-            raise Exception('Illegal XC-functional requested.')
+            raise ValueError('Illegal XC-functional requested.')
         else:
             # store exchange and correlation functional
             self.__xf = functionals[functional][0]
             self.__cf = functionals[functional][1]
             self.__dxf = functionals[functional][2]
             self.__dcf = functionals[functional][3]
-            self.__gga = functionals[functional][4]
+            self.__dxsf = functionals[functional][4]
+            self.__dcsf = functionals[functional][5]
+            self.__gga = functionals[functional][6]
 
     def is_gga(self):
         """
@@ -36,42 +51,81 @@ class Functionals:
         """
         return self.__gga
 
-    def calc_x(self, rho, grad=None):
-        """
-        Calculate exchange using specified correlation potential
+    def calc_x(self, rho, grad=None, deriv_sigma=False):
+        r"""
+        Evaluate exchange energy density and potential terms.
+
+        Parameters
+        ----------
+        rho : array_like
+            Electron density values on the numerical grid.
+        grad : array_like, optional
+            GGA input :math:`\sigma = |\nabla\rho|^2`. Required for PBE and
+            ignored for LDA.
+        deriv_sigma : bool, optional
+            If ``True``, also return the derivative with respect to ``sigma``.
+
+        Returns
+        -------
+        tuple
+            ``(epsilon_x, v_x)`` for LDA-style use, or
+            ``(epsilon_x, v_x, dF_x/dsigma)`` when ``deriv_sigma`` is true.
+            Here ``epsilon_x`` is the exchange energy per particle and
+            ``v_x = rho * d epsilon_x / d rho + epsilon_x`` is the local
+            potential contribution.
         """
         with np.errstate(divide='ignore', invalid='ignore'):
             rho = self.__parse_dens(rho)
             if self.__gga:
-                grad = self.__parse_dens(grad)
+                grad = self.__parse_sigma(grad)
                 ex = self.__xf(rho, grad)
                 fx = self.__dxf(rho, grad)
+                fsigma = rho * self.__dxsf(rho, grad)
             else:
                 ex = self.__xf(rho)
                 fx = self.__dxf(rho)
-            
+                fsigma = np.zeros_like(rho)
+
+            ex = np.nan_to_num(ex)
+            fx = np.nan_to_num(fx)
+            fsigma = np.nan_to_num(fsigma)
+
+            if deriv_sigma:
+                return ex, (fx * rho + ex), fsigma
             return ex, (fx * rho + ex)
-    
-    def calc_c(self, rho, grad=None):
-        """
-        Calculate correlation using specified correlation potential
+
+    def calc_c(self, rho, grad=None, deriv_sigma=False):
+        r"""
+        Evaluate correlation energy density and potential terms.
+
+        Parameters and return values follow :meth:`calc_x`, but for the
+        correlation part of the selected exchange-correlation functional.
         """
         with np.errstate(divide='ignore', invalid='ignore'):
             rho = self.__parse_dens(rho)
             if self.__gga:
+                grad = self.__parse_sigma(grad)
                 ex = self.__cf(rho, grad)
                 fx = self.__dcf(rho, grad)
+                fsigma = rho * self.__dcsf(rho, grad)
             else:
                 ex = self.__cf(rho)
                 fx = self.__dcf(rho)
-            
+                fsigma = np.zeros_like(rho)
+
             ex = np.nan_to_num(ex)
             fx = np.nan_to_num(fx)
-            
+            fsigma = np.nan_to_num(fsigma)
+
+            if deriv_sigma:
+                return ex, (fx * rho + ex), fsigma
             return ex, (fx * rho + ex)
 
     def __parse_dens(self, dens):
         return np.maximum(dens, 1e-12)
+
+    def __parse_sigma(self, sigma):
+        return np.maximum(sigma, 0.0)
 
     def __slater(self, dens):
         """
@@ -160,19 +214,34 @@ class Functionals:
         
         return (t1 + t2 + t3) / t4
 
+    def __pbe_x_deriv_sigma(self, rho, gamma):
+        """
+        PBE exchange derivative towards sigma = |grad rho|^2.
+        """
+        R = 0.804
+        mu = 0.2195149727645171
+
+        c2 = 0.0192920212964
+        c3 = 0.0261211729852
+
+        denom = c3 * gamma * mu + R * rho**(8/3)
+        return -c2 * mu * R**2 * rho**3 / denom**2
+
     def __pbe_x_deriv_numerical(self, rho, gamma):
         """
         PBE Exchange derivative using numerical approximation
         """
         # use finite difference discretization to approximate result
         dx = 1e-5
-        return (self.pbe_x_deriv_simplified(rho + dx, gamma) - self.pbe_x_deriv_simplified(rho - dx, gamma)) / (2. * dx)
+        return (self.__pbe_x(rho + dx, gamma) - self.__pbe_x(rho - dx, gamma)) / (2. * dx)
 
     def __pbe_c(self, rho, gamma):
         """
         Reparametrization of the PBE correlation functional for spin-unpolarized density
         """
-        c1 = -0.0621814 
+        gamma = np.asarray(gamma)
+
+        c1 = -0.0621814
         c2 = 0.008243319792565314
         c3 = 0.3720033616668558
         c4 = 0.13838902240433937
@@ -203,9 +272,10 @@ class Functionals:
         t2 = 1 + 1/(c3irho16 + c4irho13 + c5irho12 + c6irho23)
         t3 = (-1. + 1.*(1 + 1/(c3irho16 + c4irho13 + c5irho12 + c6irho23))**(c12 + c13irho13))
         t4 = (-1. + 1.*(1 + 1/(c10*irho16 + c4irho13 + c11*irho12 + c6irho23))**(c12 + c13irho13))
-        t5 = 1. + 1 / ((c8*rho**(7/3))/gamma + (c9gamma)/(t4*(c9gamma + t3*rho**(7/3))))
+        with np.errstate(divide='ignore', invalid='ignore'):
+            t5 = 1. + 1 / ((c8*rho**(7/3))/gamma + (c9gamma)/(t4*(c9gamma + t3*rho**(7/3))))
 
-        return t1*np.log(t2) + c7*np.log(t5)
+        return np.nan_to_num(t1*np.log(t2) + c7*np.log(t5))
 
     def __pbe_c_deriv(self, rho, gamma):
         """
@@ -214,3 +284,30 @@ class Functionals:
         # use finite difference discretization to approximate result
         dx = 1e-5
         return (self.__pbe_c(rho + dx, gamma) - self.__pbe_c(rho - dx, gamma)) / (2. * dx)
+
+    def __pbe_c_deriv_sigma(self, rho, gamma):
+        """
+        PBE correlation derivative towards sigma = |grad rho|^2.
+        """
+        beta = 0.06672455060314922
+        gamma_c = 0.031090690869654897
+
+        ec = self.__pbe_c(rho, 0.0)
+        kf = (3 * np.pi**2 * rho)**(1/3)
+        ks = np.sqrt(4 * kf / np.pi)
+        t = gamma / (4 * ks**2 * rho**2)
+        A = (beta / gamma_c) / (np.exp(-ec / gamma_c) - 1)
+
+        numerator = t + A * t**2
+        denominator = 1 + A * t + A**2 * t**2
+        y = (beta / gamma_c) * numerator / denominator
+
+        dnumerator = 1 + 2 * A * t
+        ddenominator = A + 2 * A**2 * t
+        dy_dt = (beta / gamma_c) * (
+            (dnumerator * denominator - numerator * ddenominator) /
+            denominator**2
+        )
+        dt_dgamma = 1 / (4 * ks**2 * rho**2)
+
+        return gamma_c * dy_dt * dt_dgamma / (1 + y)

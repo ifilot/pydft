@@ -1,8 +1,10 @@
-.. _background:
 .. index:: Background
 
 Background
 ==========
+
+.. contents:: Table of Contents
+    :depth: 3
 
 :program:`PyDFT` is a pure-Python package for performing DFT calculations, 
 extending upon the functionality of `PyQInt <https://pyqint.imc-tue.nl/>`_
@@ -23,20 +25,42 @@ Molecular decomposition
 Solving the integrals involved in the electronic structure calculation is handled
 by means of numerical integration, also termed quadrature. The quadratures are
 solved by decomposing the molecule into so-called "fuzzy" cells as documented
-in the work of Becke.
+in the work of Becke :cite:p:`becke:1988:multicenter`.
+
+In practice, PyDFT starts from atom-centered grids. Each atom receives a radial
+Gauss-Chebychev grid and an angular Lebedev grid :cite:p:`lebedev:1976`. The
+Becke partitioning then assigns a smooth molecular weight to every atom at
+every grid point. These weights add up to one, so an integral over the molecule
+can be evaluated as a sum of weighted atomic-grid integrals. This decomposition
+is implemented by :class:`pydft.MolecularGrid`, while the per-atom
+radial/angular grids are implemented by :class:`pydft.AtomicGrid`.
 
 Hartree potential
 -----------------
 
 Electron-electron repulsion is handled by calculating the Hartree potential
 by means of solving Poisson's equation. This equation is solved per fuzzy cell,
-as detailed in the seminal paper of Becke.
+as detailed in the work of Becke and Dickson :cite:p:`becke:1988:poisson`.
 
+The educational advantage of this approach is that the Coulomb term can be
+inspected in stages. PyDFT projects the density in each atomic cell onto real
+spherical harmonics, solves the radial Poisson equation for each
+spherical-harmonic channel, interpolates the resulting Hartree-potential
+coefficients onto the molecular grid, and finally integrates those values with
+pairs of basis functions to build the matrix :math:`\mathbf{J}`.
 
 Exchange-correlation functions
 ------------------------------
 
 :program:`PyDFT` currently supports two exchange-correlation functions:
 
-* LDA: Slater exchange + SVWN5 for the correlation
+* LDA: Slater exchange :cite:p:`slater:1951` + SVWN5 for the correlation
+  :cite:p:`vosko:1980`
 * PBE: The (standard) Perdew-Burke-Ernzerhof exchange-correlation functional
+  :cite:p:`pbe:1996`
+
+Both functionals are evaluated on the numerical molecular grid. For LDA, the
+energy density depends only on the local electron density :math:`\rho`. For PBE,
+the energy density also depends on the gradient invariant
+:math:`\sigma = |\nabla\rho|^2`, so PyDFT additionally caches basis-function
+gradients and adds the corresponding GGA matrix contribution.

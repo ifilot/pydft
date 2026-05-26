@@ -1,12 +1,6 @@
 # -*- coding: utf-8 -*-
 import numpy as np
 import matplotlib.pyplot as plt
-import os, sys
-
-# add a reference to load the module
-ROOT = os.path.dirname(__file__)
-sys.path.insert(1, os.path.join(ROOT, '..'))
-
 from pydft import MoleculeBuilder, MolecularGrid
 
 def main():

@@ -1,10 +1,21 @@
 # -*- coding: utf-8 -*-
+"""Lebedev angular quadrature support for atom-centered integration grids."""
 
 import os
 import numpy as np
 import pylebedev
 
 class AngularGrid:
+    """
+    Load and cache Lebedev quadrature rules by number of angular points.
+
+    PyDFT uses Lebedev grids to integrate functions over the angular part of an
+    atom-centered spherical grid. This small wrapper translates the educational
+    input used throughout PyDFT, ``nangpts``, into the Lebedev order expected by
+    :mod:`pylebedev` and stores the resulting angles, Cartesian unit-sphere
+    points, and quadrature weights.
+    """
+
     def __init__(self):
         """
         Construct the class
@@ -40,7 +51,7 @@ class AngularGrid:
             # return datapoints
             return self.__coeff[str(numpoints)]
         else:
-            raise Exception('There is no Lebedev order with %s number of points' % numpoints)
+            raise ValueError('There is no Lebedev order with %s number of points' % numpoints)
     
     def get_dataset_sizes(self):
         """

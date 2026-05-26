@@ -1,38 +1,70 @@
 # -*- coding: utf-8 -*-
+"""Atom-centered radial/angular grids and local Hartree-potential machinery."""
 
 import numpy as np
 from scipy.interpolate import CubicSpline
-from . import bragg_slater
 from .angulargrid import AngularGrid
-from .spherical_harmonics import spherical_harmonic
+from .spherical_harmonics import SphericalHarmonicsCache
 import math
+from .stencil import stencil_interp
+from .data import BSRADII, ATCHARGE
 
 class AtomicGrid:
-    def __init__(self, at, nshells:int=32, nangpts:int=110, lmax:int=8,
+    """
+    Represent the numerical integration grid attached to one atom.
+
+    An atomic grid combines a radial Gauss-Chebychev grid with a Lebedev angular
+    grid. During a molecular calculation, each :class:`AtomicGrid` stores the
+    portion of the electron density assigned to its fuzzy Becke cell, projects
+    that density onto real spherical harmonics, and solves the radial Poisson
+    equations used to reconstruct the Hartree potential.
+
+    The class deliberately exposes several intermediate quantities, such as
+    quadrature weights, spherical-harmonic coefficients, and Hartree-potential
+    coefficients, because these are useful when studying how the molecular grid
+    calculation is assembled from atom-centered pieces.
+    """
+
+    def __init__(self, 
+                 at, 
+                 nshells:int=32, 
+                 nangpts:int=110,
+                 lmax:int=8,
                  fdpts:int=7):
         """
-        Initialize the class
-        
-        at:      atom
-        nshells: number of radial shells
-        nangpts: number of angular points
+        Construct an atom-centered quadrature grid.
+
+        Parameters
+        ----------
+        at : tuple[str, np.ndarray]
+            Atom entry containing the element symbol and Cartesian position.
+        nshells : int, optional
+            Number of radial Gauss-Chebychev shells.
+        nangpts : int, optional
+            Number of Lebedev angular points per radial shell.
+        lmax : int, optional
+            Maximum angular momentum used in spherical-harmonic expansions.
+        fdpts : int, optional
+            Number of stencil points used in the finite-difference Poisson solve.
         """
         self.__atom = at
-        self.__cp = at[0]           # center of the atomic grid (= position of the atom)
-        self.__aidx = at[1]         # element id
-        self.__nshells = nshells    # number of radial shells
-        self.__fdpts = fdpts        # number of grid points used in finite difference scheme
+        self.__cp = at[1]               # center of the atomic grid (= position of the atom)
+        self.__el = at[0]               # element name
+        self.__atidx = ATCHARGE[at[0]]  # atom charge (=atom number)
+        self.__nshells = nshells        # number of radial shells
+        self.__nangpts = nangpts        # number of angular points
+        self.__fdpts = fdpts            # number of grid points used in finite difference scheme
         
         # perform some parameter checking
         if self.__fdpts < 3:
-            raise Exception('Number of grid points in stencil must at least be 3')
+            raise ValueError('Number of grid points in stencil must at least be 3')
         if self.__fdpts % 2 != 1:
-            raise Exception('Only odd number of grid points are allowed')
+            raise ValueError('Only odd number of grid points are allowed')
         
         # set coefficients and parameters
         self.__set_bragg_slater_radius()
         self.__build_chebychev_grid()
-        self.__lebedev_coeff = self.__load_lebedev_coefficients(nangpts)
+        self.__lebedev_coeff = self.__load_lebedev_coefficients(self.__nangpts)
         
         # store the positions of the angular points, their weights for the
         # Lebedev integration and the value of the spherical harmonics at
@@ -49,13 +81,25 @@ class AtomicGrid:
         """
         Get the atomic charge
         """
-        return self.__aidx
+        return self.__atidx
     
     def get_radial_grid(self):
         """
         Return radial grid
         """
         return self.__rr
+    
+    def get_lmax(self):
+        """
+        Get lmax value
+        """
+        return self.__lmax
+    
+    def get_nr_pts(self):
+        """
+        Get total number of sampling points for this atom
+        """
+        return self.__nshells * self.__nangpts
     
     def get_full_grid(self):
         """
@@ -71,19 +115,18 @@ class AtomicGrid:
         
     def set_gradient(self, gradient):
         """
-        Set the density at the grid points
+        Set the electron-density gradient at the grid points.
         """
         self.__gradient = gradient.reshape((len(self.__rr), len(self.__angpts), 3))
     
     def get_local_hartree_potential(self):
         """
-        Returns the local Hartree potential for only this atomic grid and
-        not considering any interactions of the other atomic grids
-        
-        Note:
-        * This function should only be used after htpot has been generated
-          using either calculate_coulomb_energy() or variants of this function
-        * This function should only be used for educational purposes
+        Return the Hartree potential generated by this atomic grid alone.
+
+        This educational helper ignores interactions with the other atomic
+        grids. It is valid only after ``__htpot`` has been generated by
+        :meth:`calculate_coulomb_energy` or
+        :meth:`calculate_coulomb_energy_interpolation`.
         """
         return self.__htpot.flatten()
     
@@ -101,12 +144,6 @@ class AtomicGrid:
         # harmonic coefficients that describe the Hartree potential (ulm)
         # in that radial shell
         self.__calculate_hartree_potential_coefficients()
-        
-        # build cubic interpolation
-        self.__ulm_splines = []
-        rr = np.flip(self.__rr)
-        for i in range((self.__lmax+1)**2):
-            self.__ulm_splines.append(CubicSpline(rr, np.flip(self.__ulm[:,i])))
 
     def get_ulm(self):
         """
@@ -126,11 +163,102 @@ class AtomicGrid:
         """
         return self.__ylm
 
+    def calculate_interpolated_ulm_at_points(self, rpoints):
+        """
+        Interpolate Hartree-potential coefficients at arbitrary radii.
+
+        This method is a compatibility wrapper around
+        :meth:`calculate_interpolated_ulm`, which builds cubic splines directly
+        for the requested radii. For repeated evaluations on the fixed molecular
+        grid, :meth:`calculate_interpolated_ulm_stencil` is faster.
+        """
+        return self.calculate_interpolated_ulm(rpoints)
+
+    def calculate_interpolated_ulm_stencil(self):
+        """
+        Interpolate Hartree-potential coefficients at cached molecular radii.
+
+        :meth:`build_cubic_stencil_evaluation` first precomputes, for each
+        requested radius, the four neighboring radial grid indices and their
+        cubic interpolation weights. This method applies those cached stencils
+        to every spherical-harmonic channel of ``U_lm``. It is equivalent in
+        purpose to :meth:`calculate_interpolated_ulm`, but avoids rebuilding a
+        SciPy spline object for every SCF iteration.
+
+        Returns
+        -------
+        np.ndarray
+            Interpolated Hartree-potential expansion coefficients with shape
+            ``(N_lm, N_points)``.
+        """
+        out = np.empty(
+            (self.__ulm.shape[1], self._stencil_i.size),
+            dtype=self.__ulm.dtype
+        )
+
+        stencil_interp(
+            self.__ulm[::-1, :],
+            self._stencil_i,
+            self._stencil_w,
+            out
+        )
+
+        return out
+
+    def build_cubic_stencil_evaluation(self, r_eval):
+        """
+        Precompute cubic interpolation stencils for requested radii.
+
+        The atomic radial grid is stored from large to small radius. For
+        interpolation, the grid is reversed into ascending order, and every
+        molecular-grid radius is associated with a local four-point Lagrange
+        stencil. The cached indices and weights are reused when the Hartree
+        potential coefficients change during the SCF cycle.
+
+        Parameters
+        ----------
+        r_eval : array_like
+            Radii, measured relative to this atom, at which ``U_lm`` should be
+            evaluated.
+        """
+        x = self.__rr[::-1]
+        r = np.asarray(r_eval)
+
+        n = x.size
+        if n < 4:
+            raise ValueError("Need at least 4 grid points")
+
+        i = np.searchsorted(x, r) - 1
+        i = np.clip(i, 1, n - 3)
+
+        x0 = x[i - 1]
+        x1 = x[i]
+        x2 = x[i + 1]
+        x3 = x[i + 2]
+
+        w0 = ((r - x1)*(r - x2)*(r - x3)) / ((x0 - x1)*(x0 - x2)*(x0 - x3))
+        w1 = ((r - x0)*(r - x2)*(r - x3)) / ((x1 - x0)*(x1 - x2)*(x1 - x3))
+        w2 = ((r - x0)*(r - x1)*(r - x3)) / ((x2 - x0)*(x2 - x1)*(x2 - x3))
+        w3 = ((r - x0)*(r - x1)*(r - x2)) / ((x3 - x0)*(x3 - x1)*(x3 - x2))
+
+        self._stencil_i = i
+        self._stencil_w = np.stack((w0, w1, w2, w3), axis=1)
+
     def calculate_interpolated_ulm(self, rr):
         """
-        Calculate interpolated Hartree potential expansion coefficients
-        for all points r in the array rr
+        Calculate interpolated Hartree potential expansion coefficients for all
+        points r in the array rr using CubicSpline interpolation
+
+        Note that CubicSpline expect that the r values are *ascending*; in the
+        default grid, they are descending, which is why both rr and ulm
+        are reversed.
         """
+        # build cubic interpolation
+        self.__ulm_splines = []
+        rr_rev = np.flip(self.__rr)
+        for i in range((self.__lmax+1)**2):
+            self.__ulm_splines.append(CubicSpline(rr_rev, np.flip(self.__ulm[:,i])))
+
         ulmintp = np.zeros((len(self.__ulm_splines), len(rr)))
                 
         # loop over lm pairs and interpolate value for Ulm at points rr
@@ -222,9 +350,13 @@ class AtomicGrid:
 
     def get_dfa_nuclear_local(self):
         """
-        Get density functional approximation of the kinetic energy for this atomic cell
+        Get the local density approximation to nuclear attraction for this cell.
+
+        Only the nucleus at the center of this atomic grid is included. The
+        molecular-grid method adds the attraction from all nuclei when the full
+        electron-nuclear energy is needed.
         """
-        npot = -self.__aidx / self.__rr # build nuclear attraction potential
+        npot = -self.__atidx / self.__rr # build nuclear attraction potential
         return np.einsum('i,ij,ij,ij', npot, self.__edens, self.__wgrid, self.__mweights)
 
     def perform_spherical_harmonic_expansion(self, f):
@@ -304,7 +436,7 @@ class AtomicGrid:
         """
         Calculate the nuclear attraction given the electron density
         """
-        npot = -self.__aidx / self.__rr # build nuclear attraction potential
+        npot = -self.__atidx / self.__rr # build nuclear attraction potential
         return np.einsum('ij,i,ij', self.__wgrid, npot, self.__edens)
     
     def calculate_coulomb_energy(self):
@@ -348,24 +480,27 @@ class AtomicGrid:
         """
         Calculates the weight factors on the grid and also builds the list
         of coordinates of the grid points
+
+        **NOTE**: Grid points are defined in the molecular frame
         """
         radial_weights = np.array([wgc * r**2 for wgc,r in zip(self.__wgcs, self.__rr)])
         self.__wgrid = np.outer(4.0 * np.pi * radial_weights, self.__wangpts)
         
-        self.__gridpoints = []
-        for rc,r in enumerate(self.__rr):
-            [self.__gridpoints.append(r * angpt + self.__cp) for angpt in self.__angpts]
+        gridpoints = []
+        for r in self.__rr:
+            [gridpoints.append(r * angpt + self.__cp) for angpt in self.__angpts]
+        self.__gridpoints = np.array(gridpoints)
     
-    def __load_lebedev_coefficients(self, order:int):
+    def __load_lebedev_coefficients(self, nangpts:int):
         """
         Load Lebedev coefficients from data file and store these as a class
-        variable in a dictionary. Each set of angular points is stored as
-        a Nx4 matrix wherein the first three per row correspond to the
-        position on the unit sphere and the last row to the weight as used
-        in the Lebedev integration.
+        variable in a dictionary. Each set of angular points is stored as a Nx6
+        matrix wherein the first two columns correspond theta and phi, the
+        third-fifth column to the Cartesian coordinates on the unit sphere, and
+        the last column to the weight as used in the Lebedev integration.
         """
         ag = AngularGrid()
-        return ag.get_coefficients(order)
+        return ag.get_coefficients(nangpts)
     
     def __build_chebychev_grid(self):
         """
@@ -381,15 +516,15 @@ class AtomicGrid:
     
     def __build_ylm(self):
         """
-        Calculate the value for spherical harmonics at the angular points
+        Build spherical harmonics values at the angular points, use caching if needed
         """
-        self.__ylm = np.zeros(((self.__lmax+1)**2, len(self.__angpts)))
-        lmctr = 0
-        for l in range(0, self.__lmax+1):
-            for m in range(-l, l+1):
-                ylm = [spherical_harmonic(l, m, p[0], p[1]) for p in self.__usangles]
-                self.__ylm[lmctr,:] = np.array(ylm)
-                lmctr += 1
+        self.__ylm = SphericalHarmonicsCache.get_ylm(self.__lmax, self.__nangpts)
+
+    def get_ylm_atom(self):
+        """
+        Grab the spherical harmonic values at the angular points
+        """
+        return self.__ylm
     
     def __build_finite_difference_matrix(self, r, rm):
         """
@@ -468,7 +603,7 @@ class AtomicGrid:
         # note that the bragg_slater.BSRADII list starts with hydrogen at
         # index 0 whereas aidx variable sets Hydrogen at index 1, Helium at
         # index 2, and so on
-        self.__rm = bragg_slater.BSRADII[self.__aidx-1]
+        self.__rm = BSRADII[self.__el]
 
     def __d2zdr2(self, r, rm):
         """
@@ -483,3 +618,13 @@ class AtomicGrid:
         Calculate square of first derivative of z-grid towards (regular) r-grid
         """
         return rm / (np.pi * np.pi * r * (rm + r) * (rm + r))
+
+def job_build_atomic_grid(args):
+    """
+    Build an :class:`AtomicGrid` from a tuple of constructor arguments.
+
+    This helper is kept at module level so it can be used with executor-style
+    parallel construction without capturing a larger object graph.
+    """
+    atom, nshells, nangpts, lmax, fdpts = args
+    return AtomicGrid(atom, nshells, nangpts, lmax, fdpts)

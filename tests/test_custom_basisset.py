@@ -1,10 +1,5 @@
 import unittest
-import sys
-import os
 import numpy as np
-
-# add a reference to load the pyDFT module
-sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 
 from pydft import MoleculeBuilder, DFT
 from pyqint import CGF
@@ -30,10 +25,10 @@ class TestCustomBasisSet(unittest.TestCase):
 
         # construct dft object
         dft = DFT(mol, basis=cgfs)
-        energy = dft.scf()
+        res = dft.scf()
 
-        answer = -1.1570136
-        np.testing.assert_almost_equal(energy, answer, 4)
+        answer = -1.1562627795279132
+        np.testing.assert_almost_equal(res['energy'], answer, 4)
 
 if __name__ == '__main__':
     unittest.main()
