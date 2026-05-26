@@ -39,6 +39,6 @@ class, please consult the
 .. code-block:: python
 	:linenos:
 
-	from pyqint import Molecule
+	from pyqint import MoleculeBuilder
 
 	co = MoleculeBuilder().from_name("CO")

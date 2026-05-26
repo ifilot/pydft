@@ -36,7 +36,7 @@ Alternative (single-user install without a virtual environment)
 If you prefer not to create a virtual environment, you can install for the
 current user only (no system-wide changes)::
 
-    pip install --user pyqint
+    pip install --user pydft
 
 .. warning::
     We **do not recommend** using ``sudo pip install ...``. Installing packages

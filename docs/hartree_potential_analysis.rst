@@ -7,7 +7,7 @@ Hartree potential analysis
     :depth: 3
 
 The Hartree potential is calculated from the electron density distribution
-using the Poisson equation. 
+using the Poisson equation :cite:p:`becke:1988:poisson`.
 
 PyDFT solves this problem in an atom-centered representation. The molecular
 density is first split into Becke fuzzy cells. Within each cell, the angular
@@ -39,7 +39,10 @@ We can readily visualize and interpret this projection using the
 	:linenos:
 	:emphasize-lines: 13
 
-.. image:: _static/img/user_interface/07-spherical-harmonics-projection.png
+.. figure:: _static/img/user_interface/07-spherical-harmonics-projection.png
+   :width: 78%
+
+   Spherical-harmonic expansion coefficients of the atom-centered density.
 
 Radial Poisson solve
 --------------------

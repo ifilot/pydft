@@ -12,6 +12,9 @@ PyDFT: pure-python density functional theory
 calculations using Gaussian Type Orbitals. 
 
 .. image:: _static/img/pydft_logo_full_512px.png
+   :width: 360px
+   :align: center
+   :class: no-frame
 
 The primary purpose of :program:`PyDFT` is to serve as an educational tool that
 illustrates the inner workings of a density-functional theory calculation.
@@ -30,9 +33,9 @@ documentation, providing detailed insight into a fully working DFT code.
    <https://ifilot.pages.tue.nl/elements-of-electronic-structure-theory/>`_.
 
 :program:`PyDFT` has been developed at the Eindhoven University of Technology,
-Netherlands. :program:`PyDFT` and its development are hosted on `Github
+Netherlands. :program:`PyDFT` and its development are hosted on `GitHub
 <https://www.github.com/ifilot/pydft>`_.  Bugs and feature requests are ideally
-submitted via the `github issue tracker
+submitted via the `GitHub issue tracker
 <https://www.github.com/ifilot/pydft/issues>`_.
 
 .. toctree::
@@ -49,6 +52,7 @@ submitted via the `github issue tracker
    scalar_field_analysis
    api_reference
    benchmarks
+   references
    community_guidelines
 
 Indices and tables

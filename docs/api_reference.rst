@@ -12,6 +12,7 @@ Public package interface
 ------------------------
 
 .. automodule:: pydft
+   :members:
 
 SCF driver
 ----------

@@ -26,6 +26,9 @@ start by generating a plot of the electron density using the method
 Running the above script yields the electron density.
 
 .. figure:: _static/img/user_interface/01-electron-density.png
+   :width: 70%
+
+   Logarithmic electron density of CO sampled in the molecular plane.
 
 Using largely the same code, we can also readily build the electron density
 gradient magnitude using :meth:`pydft.DFT.get_gradient_at_points`.
@@ -36,6 +39,9 @@ gradient magnitude using :meth:`pydft.DFT.get_gradient_at_points`.
     :emphasize-lines: 25
 
 .. figure:: _static/img/user_interface/02-electron-density-gradient.png
+   :width: 70%
+
+   Magnitude of the electron-density gradient in the same plane.
 
 Exchange potential
 ------------------
@@ -49,7 +55,10 @@ method.
 	:linenos:
 	:emphasize-lines: 13
 
-.. image:: _static/img/user_interface/08-exchange-potential.png
+.. figure:: _static/img/user_interface/08-exchange-potential.png
+   :width: 70%
+
+   Exchange potential evaluated on an arbitrary two-dimensional grid.
 
 Correlation potential
 ---------------------
@@ -63,4 +72,7 @@ correlation potential field.
 	:linenos:
 	:emphasize-lines: 13
 
-.. image:: _static/img/user_interface/08-correlation-potential.png
+.. figure:: _static/img/user_interface/08-correlation-potential.png
+   :width: 70%
+
+   Correlation potential evaluated on the same grid.

@@ -24,10 +24,12 @@ scaling in the radial grid size combined with a superlinear (approximately
 1.5-power) scaling in the number of angular points.
 
 .. figure:: _static/img/scaling/co_trend_angplot.png
+    :width: 82%
 
     Scaling of the wall-clock time with respect to the number of angular points.
 
 .. figure:: _static/img/scaling/co_trend_time.png
+    :width: 82%
 
     Scaling of the wall-clock time with respect to the total number of grid
     points, which is the product of the number of radial shells times the 
@@ -50,6 +52,7 @@ requirements, increasing the number of radial shells to 64 further reduces the
 error to approximately :math:`1 \times 10^{-6}`.
 
 .. figure:: _static/img/scaling/co_energy_angplot.png
+    :width: 82%
 
     Relative error as function of the number of radial shells and the number
     of angular points.

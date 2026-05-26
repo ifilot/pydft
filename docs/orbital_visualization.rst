@@ -21,6 +21,9 @@ is extracted via the script below.
     :linenos:
 
 .. figure:: _static/img/user_interface/04-kohn-sham-orbitals.png
+   :width: 68%
+
+   Molecular-orbital coefficient matrix in the atomic-orbital basis.
 
 Contour plots
 -------------
@@ -28,7 +31,7 @@ Contour plots
 These orbitals can be readily visualized, as exemplified in the code below. Here,
 we make use of the :meth:`pydft.MolecularGrid.get_amplitude_at_points` method.
 To use this method, we first have to retrieve the :class:`pydft.MolecularGrid`
-object from the :class:`pydft.DFT` class via its :meth:`pydft.get_molgrid_copy`
+object from the :class:`pydft.DFT` class via its :meth:`pydft.DFT.get_molgrid_copy`
 method.
 
 .. literalinclude:: scripts/05-orbital-contour-plot.py
@@ -37,6 +40,9 @@ method.
     :emphasize-lines: 37
 
 .. figure:: _static/img/user_interface/05-orbital-contour-plot.png
+   :width: 95%
+
+   Contour plots for the Kohn-Sham molecular orbitals of CO.
 
 .. seealso::
 	

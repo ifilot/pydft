@@ -1,7 +1,7 @@
 import numpy as np
 from pydft import MoleculeBuilder, DFT
 
-co = MoleculeBuilder.from_name("CO")
+co = MoleculeBuilder().from_name("CO")
 dft = DFT(co, basis='sto3g')
 res = dft.scf(1e-4, verbose=False)
 print("Total electronic energy:     %12.6f Ht" % res['energy'])

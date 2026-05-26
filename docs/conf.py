@@ -36,7 +36,8 @@ extensions = [
     'sphinx.ext.mathjax',
     'sphinx.ext.autosectionlabel',
     'sphinx.ext.autodoc',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
+    'sphinxcontrib.bibtex'
 ]
 if _has_rtd_theme:
     extensions.append('sphinx_rtd_theme')
@@ -56,6 +57,26 @@ autodoc_mock_imports = [
 ]
 
 suppress_warnings = ['autosectionlabel.*']
+
+bibtex_bibfiles = ['../paper/paper.bib']
+bibtex_reference_style = 'author_year'
+
+# Keep nitpicky builds focused on PyDFT cross-references. Autodoc sees several
+# external dependency types and NumPy-style aliases that do not have local
+# inventories in this documentation set.
+nitpick_ignore_regex = [
+    ('py:class', r'pyqint\..*'),
+    ('py:class', r'collections\.abc\.Mapping'),
+    ('py:class', r'numpy\..*'),
+    ('py:class', r'np\..*'),
+    ('py:class', r'ndarray'),
+    ('py:class', r'array_like'),
+    ('py:class', r'iterable'),
+    ('py:class', r'optional'),
+    ('py:class', r'lmax'),
+    ('py:class', r'nangpts'),
+    ('py:mod', r'pylebedev'),
+]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
