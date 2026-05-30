@@ -270,7 +270,7 @@ class DFT():
         verbose : bool, optional
             If ``True``, log one line per SCF iteration showing the iteration
             number, total energy, energy change, and elapsed time. Configure
-            the :mod:`logging` module to display these messages.
+            the ``logging`` module to display these messages.
 
         Returns
         -------
