@@ -54,9 +54,7 @@ assembled from numerical grids, density values, potentials, matrix elements,
 and convergence controls.
 
 Excellent theoretical treatments exist, including the classic text by Parr and
-Yang [@parr:1989], and the underlying theory used in PyDFT is developed in the
-open-access book *Elements of Electronic Structure Theory* [@eoesbook].
-However, compared with Hartree-Fock theory,
+Yang [@parr:1989]. However, compared with Hartree-Fock theory,
 where implementation-level introductions are more common [@szabo], fewer
 resources guide readers through the construction of a working molecular DFT
 program at the level of code, data structures, grids, and intermediate
