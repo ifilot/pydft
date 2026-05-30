@@ -16,14 +16,14 @@ calculations using Gaussian Type Orbitals.
    :align: center
    :class: no-frame
 
-The primary purpose of :program:`PyDFT` is to serve as an educational tool that
-illustrates the inner workings of a density-functional theory calculation.
-Currently, :program:`PyDFT` supports LDA and PBE exchange-correlation
-functionals. While it is not intended to replace mature open-source or
-commercial electronic-structure packages, care has been taken to achieve
-reasonable performance within the constraints of a Python implementation. In
-addition, a strong emphasis has been placed on code clarity and comprehensive
-documentation, providing detailed insight into a fully working DFT code.
+:program:`PyDFT` serves as an educational tool that illustrates the inner
+workings of a density-functional theory calculation. Currently, :program:`PyDFT`
+supports LDA and PBE exchange-correlation functionals. While it is not intended
+to replace mature open-source or commercial electronic-structure packages, care
+has been taken to achieve reasonable performance within the constraints of a
+Python implementation. In addition, a strong emphasis has been placed on code
+clarity and comprehensive documentation, providing detailed insight into a fully
+working DFT code.
 
 .. tip::
 
