@@ -18,7 +18,7 @@ jobs:
   build-pip:
     name: Build pip
     runs-on: ubuntu-22.04
-    container: python:3.11-slim-bullseye
+    container: python:3.11-slim-bookworm
 
     steps:
       - uses: actions/checkout@v4
@@ -38,24 +38,28 @@ jobs:
           name: whl
   
   test-pip:
-    name: Perform unit testing
+    name: Perform unit testing (Python ${{ matrix.python-version }})
     needs: [build-pip]
     runs-on: ubuntu-22.04
-    container: python:3.11-slim-bullseye
-    permissions:
-      contents: read
-      id-token: write
+    container: python:${{ matrix.python-version }}-slim-bookworm
+    env:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
 
     steps:
+      - name: Install coverage upload dependencies
+        if: matrix.python-version == '3.11'
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git curl gnupg
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
         with:
           name: whl
           path: dist
-      - name: Install system dependencies
-        run: |
-          apt-get update
-          apt-get install -y --no-install-recommends git curl gnupg
       - name: Install PyDFT
         run: |
           pip install virtualenv
@@ -69,11 +73,16 @@ jobs:
           python -m coverage report
           python -m coverage xml
       - name: Upload coverage report
+        if: matrix.python-version == '3.11' && env.CODECOV_TOKEN != ''
         uses: codecov/codecov-action@v5
         with:
           files: coverage.xml
+          token: ${{ secrets.CODECOV_TOKEN }}
           fail_ci_if_error: false
-          use_oidc: true
+      - name: Skip Codecov upload
+        if: matrix.python-version == '3.11' && env.CODECOV_TOKEN == ''
+        run: |
+          echo "::notice::Skipping Codecov upload because CODECOV_TOKEN is not configured."
   
   upload_pypi:
     needs: [build-pip, test-pip]

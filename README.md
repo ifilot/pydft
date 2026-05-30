@@ -85,11 +85,25 @@ computational cost.
 
 ## Installation
 
-This code depends on a few other packages. To install this code and its
-dependencies, run the following one-liner
+PyDFT supports Python 3.10 and newer.
+
+To install PyDFT and its core runtime dependencies, run
 
 ```bash
-pip install pydft pyqint pylebedev pytessel
+pip install pydft
+```
+
+The plotting and example scripts use optional visualization dependencies:
+
+```bash
+pip install "pydft[plot]"
+```
+
+To install the dependencies used by the example scripts, including isosurface
+support, run
+
+```bash
+pip install "pydft[examples]"
 ```
 
 ## Usage
@@ -108,7 +122,7 @@ from pydft import MoleculeBuilder, DFT
 
 CO = MoleculeBuilder().get_molecule("CO")
 dft = DFT(CO, basis='sto3g')
-res = dft.scf(1e-4, verbose=True)
+res = dft.scf(1e-4)
 print("Total electronic energy: %f Ht" % res['energy'])
 ```
 
