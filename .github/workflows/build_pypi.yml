@@ -49,6 +49,10 @@ jobs:
         with:
           name: whl
           path: dist
+      - name: Install system dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends git curl gnupg
       - name: Install PyDFT
         run: |
           pip install virtualenv
