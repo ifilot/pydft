@@ -2,7 +2,7 @@ import unittest
 import numpy as np
 
 from pyqint import PyQInt, Molecule
-from pydft import MoleculeBuilder, MolecularGrid
+from pydft import MoleculeBuilder, MolecularGrid, DFT
 
 class TestMolecularGrid(unittest.TestCase):
 
@@ -94,10 +94,81 @@ class TestMolecularGrid(unittest.TestCase):
         np.testing.assert_almost_equal(mweights[0,80], 
                                        0.04752230028517094, 4)
         
-        np.testing.assert_almost_equal(mweights[1,70], 
+        np.testing.assert_almost_equal(mweights[1,70],
                                        0.41031416799944265, 4)
-        np.testing.assert_almost_equal(mweights[1,80], 
+        np.testing.assert_almost_equal(mweights[1,80],
                                        0.7991044370004883, 4)
+
+    def test_arbitrary_point_fields_and_grid_analysis_helpers(self):
+        mol = MoleculeBuilder().from_name('He')
+        dft = DFT(mol, basis='sto3g', nshells=8, nangpts=50, lmax=5)
+        res = dft.scf(tol=1e-4)
+        molgrid = dft.get_molgrid_copy()
+
+        pts = np.array([
+            [0.1, 0.0, 0.0],
+            [0.0, 0.2, 0.1],
+        ])
+        P = res['P']
+
+        self.assertEqual(molgrid.get_density_at_points(pts, P).shape, (2,))
+        self.assertEqual(molgrid.get_gradient_at_points(pts, P).shape, (2, 3))
+        self.assertEqual(molgrid.get_amplitude_at_points(pts, res['orbc'][:, 0]).shape, (2,))
+        self.assertEqual(molgrid.calculate_coulomb_potential_at_points(pts).shape, (2,))
+        self.assertEqual(molgrid.get_exchange_potential_at_points(pts, P).shape, (2,))
+        self.assertEqual(molgrid.get_correlation_potential_at_points(pts, P).shape, (2,))
+        self.assertEqual(len(molgrid.get_becke_weights()), 1)
+        self.assertEqual(molgrid.get_becke_weights()[0].shape, (400,))
+        self.assertEqual(molgrid.get_densities()[0].shape, (400,))
+        self.assertEqual(molgrid.get_gradients()[0].shape, (400, 3))
+
+        with self.assertRaisesRegex(ValueError, 'Nx3'):
+            molgrid.get_density_at_points(np.array([0.0, 0.0, 0.0]), P)
+
+        with self.assertRaisesRegex(ValueError, 'Nx3'):
+            molgrid.calculate_coulomb_potential_at_points(np.array([[0.0, 0.0]]))
+
+        with self.assertRaisesRegex(ValueError, 'singular'):
+            molgrid.calculate_coulomb_potential_at_points(np.array([[0.0, 0.0, 0.0]]))
+
+        she = molgrid.get_spherical_harmonic_expansion_of_amplitude(res['orbc'][:, 0])
+        she_radial = molgrid.get_spherical_harmonic_expansion_of_amplitude(
+            res['orbc'][:, 0],
+            radial_factor=True,
+        )
+        self.assertEqual(she.shape, (1, 8, 36))
+        self.assertEqual(she_radial.shape, she.shape)
+        self.assertFalse(np.allclose(she, she_radial))
+
+        self.assertEqual(molgrid.get_rho_lm_atoms().shape, (1, 8, 36))
+        self.assertTrue(np.isfinite(molgrid.count_electrons_from_rho_lm()))
+        self.assertTrue(np.isfinite(molgrid.calculate_dfa_nuclear_attraction_local()))
+        self.assertTrue(np.isfinite(molgrid.calculate_dfa_nuclear_attraction_full()))
+        self.assertTrue(np.isfinite(molgrid.calculate_dfa_coulomb()))
+        self.assertEqual(molgrid.get_hartree_potential().shape, (400,))
+        self.assertTrue(np.isfinite(molgrid.calculate_dfa_coulomb_no_interpolation()))
+        self.assertTrue(np.isfinite(molgrid.calculate_dfa_exchange()))
+        self.assertTrue(np.isfinite(molgrid.calculate_dfa_kinetic()))
+
+    def test_gga_point_exchange_and_correlation_potentials(self):
+        mol = MoleculeBuilder().from_name('He')
+        dft = DFT(
+            mol,
+            basis='sto3g',
+            functional='pbe',
+            nshells=8,
+            nangpts=50,
+            lmax=5,
+        )
+        res = dft.scf(tol=1e-4)
+        molgrid = dft.get_molgrid_copy()
+        pts = np.array([
+            [0.1, 0.0, 0.0],
+            [0.0, 0.2, 0.1],
+        ])
+
+        self.assertEqual(molgrid.get_exchange_potential_at_points(pts, res['P']).shape, (2,))
+        self.assertEqual(molgrid.get_correlation_potential_at_points(pts, res['P']).shape, (2,))
 
 if __name__ == '__main__':
     unittest.main()
