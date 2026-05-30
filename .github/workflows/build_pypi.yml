@@ -54,11 +54,18 @@ jobs:
           pip install virtualenv
           virtualenv venv
           . venv/bin/activate
-          pip install build pytest dist/*.whl
+          pip install build "coverage[toml]" pytest dist/*.whl
       - name: Perform unit tests
         run: |
           . venv/bin/activate
-          python -m pytest tests/*.py --verbose
+          python -m coverage run -m pytest tests/*.py --verbose
+          python -m coverage report
+          python -m coverage xml
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v5
+        with:
+          files: coverage.xml
+          fail_ci_if_error: false
   
   upload_pypi:
     needs: [build-pip, test-pip]

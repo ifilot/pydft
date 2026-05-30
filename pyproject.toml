@@ -28,12 +28,26 @@ dependencies = [
     "numba"
 ]
 
+[project.optional-dependencies]
+test = [
+    "coverage[toml]",
+    "pytest",
+]
+
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["pydft*"]
+
+[tool.coverage.run]
+branch = true
+source = ["pydft"]
+
+[tool.coverage.report]
+show_missing = true
+skip_covered = true
 
 [project.urls]
 "Homepage" = "https://github.com/ifilot/pydft"

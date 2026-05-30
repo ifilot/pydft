@@ -1,6 +1,7 @@
 # PyDFT
 
 [![build](https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml/badge.svg)](https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml)
+[![codecov](https://codecov.io/gh/ifilot/pydft/branch/master/graph/badge.svg)](https://codecov.io/gh/ifilot/pydft)
 [![PyPI](https://img.shields.io/pypi/v/pydft?color=green)](https://pypi.org/project/pydft/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
