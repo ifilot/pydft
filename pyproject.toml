@@ -13,10 +13,18 @@ maintainers = [
 ]
 description = "Localized-orbital Density Functional Theory code for educational purposes. "
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.10"
 license = {text = "GPL-3.0-or-later"}
 classifiers = [
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Intended Audience :: Education",
+    "Topic :: Scientific/Engineering :: Chemistry",
     "Operating System :: OS Independent",
 ]
 dependencies = [
@@ -24,11 +32,17 @@ dependencies = [
     "numpy",
     "pyqint>=1.2",
     "pylebedev",
-    "matplotlib",
     "numba"
 ]
 
 [project.optional-dependencies]
+plot = [
+    "matplotlib",
+]
+examples = [
+    "matplotlib",
+    "pytessel",
+]
 test = [
     "coverage[toml]",
     "pytest",

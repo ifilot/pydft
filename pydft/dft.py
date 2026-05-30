@@ -3,6 +3,7 @@
 
 from .moleculargrid import MolecularGrid
 from pyqint import PyQInt, Molecule, CGF
+import logging
 import numpy as np
 import time
 from copy import deepcopy
@@ -12,6 +13,8 @@ from .data import ATOM_NSHELLS, LMAX_NANGPTS
 # couple of hardcoded variables for the DIIS algorithm
 SUBSPACE_LENGTH = 3
 SUBSPACE_START = 4
+
+logger = logging.getLogger(__name__)
 
 class DFT():
     """
@@ -265,8 +268,9 @@ class DFT():
             Electronic energy convergence criterion in Hartree. The default is
             ``1e-5``.
         verbose : bool, optional
-            If ``True``, print one line per SCF iteration showing the iteration
-            number, total energy, energy change, and elapsed time.
+            If ``True``, log one line per SCF iteration showing the iteration
+            number, total energy, energy change, and elapsed time. Configure
+            the :mod:`logging` module to display these messages.
 
         Returns
         -------
@@ -292,9 +296,15 @@ class DFT():
             stop = time.perf_counter()
             itertime = stop - start
             self.__time_stats['iterations'].append(itertime)
-            
+
             if verbose:
-                print('%03i | E = %12.6f | dE = %5.4e | %0.4f s' % (niter+1, energy, ediff, itertime))
+                logger.info(
+                    "%03i | E = %12.6f | dE = %5.4e | %0.4f s",
+                    niter + 1,
+                    energy,
+                    ediff,
+                    itertime,
+                )
             
             if niter > 0:
                 ediff = np.abs(energy - self.__energies[-2])
@@ -307,7 +317,7 @@ class DFT():
                     
                     # terminate self-convergence cycle
                     if verbose:
-                        print("Stopping SCF cycle, convergence reached.")
+                        logger.info("Stopping SCF cycle, convergence reached.")
 
                     # update density matrix from last found coefficient matrix
                     self.__P = self.__calculate_P()
@@ -450,14 +460,18 @@ class DFT():
         # diagonalize Fock matrix
         try:
             self.__e, self.__Cprime = np.linalg.eigh(self.__Fprime)
-        except np.linalg.LinAlgError:
-            print('Error: eigenvalue convergence failed in iteration: %i' % niter)
-            print('F:', self.__Fprime)
-            print('H:', self.__H)
-            print('J:', self.__J)
-            print('XC:', self.__XC)
-            print('P:', self.__P)
-            raise np.linalg.LinAlgError
+        except np.linalg.LinAlgError as exc:
+            logger.exception(
+                "Eigenvalue convergence failed in SCF iteration %i.", niter
+            )
+            logger.debug("Fock matrix in orthonormal basis at failure:\n%s", self.__Fprime)
+            logger.debug("Core Hamiltonian matrix at failure:\n%s", self.__H)
+            logger.debug("Hartree matrix at failure:\n%s", self.__J)
+            logger.debug("Exchange-correlation matrix at failure:\n%s", self.__XC)
+            logger.debug("Density matrix at failure:\n%s", self.__P)
+            raise np.linalg.LinAlgError(
+                f"Eigenvalue convergence failed in SCF iteration {niter}."
+            ) from exc
         
         # back-transform
         self.__C = self.__X.dot(self.__Cprime)

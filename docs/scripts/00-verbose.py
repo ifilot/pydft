@@ -1,4 +1,8 @@
+import logging
+
 from pydft import MoleculeBuilder, DFT
+
+logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 # perform DFT calculation on the CO molecule
 co = MoleculeBuilder().from_name("CO")

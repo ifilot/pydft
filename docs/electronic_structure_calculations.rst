@@ -143,8 +143,8 @@ To visualize the overlap matrix :math:`\mathbf{S}` and the Fock matrix
 Showing the electronic steps
 ----------------------------
 
-To get verbose output, i.e. information per electronic step, one can specify
-:code:`verbose = True`.
+To get verbose output, i.e. information per electronic step, configure
+:mod:`logging` and specify :code:`verbose = True`.
 
 .. literalinclude:: scripts/00-verbose.py
     :language: python
