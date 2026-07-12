@@ -144,9 +144,9 @@ class Functionals:
         # but is correct in the original paper of Vosko, Wilk and Nusair
         # https://cdnsciencepub.com/doi/pdf/10.1139/p80-159
         A = 0.0621814
-        x0 = -0.409286
-        b = 13.0720
-        c = 42.7198
+        x0 = -0.10498
+        b = 3.72744
+        c = 12.9352
         
         rs = (3. / 4. / np.pi / dens)**(1./3.)
         
@@ -163,9 +163,9 @@ class Functionals:
         Derivative of the VWN5 correlation functional towards the density
         """
         A = 0.0621814
-        x0 = -0.409286
-        b = 13.0720
-        c = 42.7198
+        x0 = -0.10498
+        b = 3.72744
+        c = 12.9352
         X0 = x0**2 + b * x0 + c
         Q = (4 * c - b**2)**(1/2)
 
