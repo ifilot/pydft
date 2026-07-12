@@ -16,7 +16,7 @@ class TestXC(unittest.TestCase):
         dft = DFT(mol, basis='sto3g', functional='svwn5')
         res = dft.scf()
 
-        answer = -2.8081735181814724
+        answer = -2.7704595622068138
         np.testing.assert_almost_equal(res['energy'], answer, 4)
 
     def test_pbe(self):

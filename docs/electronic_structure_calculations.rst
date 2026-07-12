@@ -20,7 +20,7 @@ the :meth:`pydft.DFT.scf` routine to start the self-consistent field calculation
 Performing this calculation shows that the total electronic energy for this
 system corresponds to::
 
-    Total electronic energy:      -111.130470 Ht
+    Total electronic energy:      -110.854614 Ht
 
 Result dictionary
 -----------------
@@ -112,17 +112,17 @@ electron-electron repulsion and exchange-correlation energy.
 
 The above script yields the following output::
 
-  Total electronic energy:      -111.130470 Ht
+  Total electronic energy:      -110.854614 Ht
 
-  Kinetic energy:                110.217226 Ht
-  Nuclear attraction:           -304.930911 Ht
-  Electron-electron repulsion:    75.612987 Ht
-  Exchange energy:               -12.055233 Ht
-  Correlation energy:             -1.232632 Ht
-  Exchange-correlation energy:   -13.287865 Ht
+  Kinetic energy:                110.215413 Ht
+  Nuclear attraction:           -304.926853 Ht
+  Electron-electron repulsion:    75.610445 Ht
+  Exchange energy:               -12.054947 Ht
+  Correlation energy:             -0.956764 Ht
+  Exchange-correlation energy:   -13.011711 Ht
   Nucleus-nucleus repulsion:      21.258092 Ht
 
-  Sum:  -111.130470 Ht
+  Sum:  -110.854614 Ht
 
 Self-consistent field matrices
 ------------------------------
@@ -154,23 +154,23 @@ Executing the script above yields output like the following. The timings depend
 on the machine and runtime environment::
 
 	001 | E =  -179.237419 | dE = 0.0000e+00 | 0.0010 s
-	002 | E =  -106.662588 | dE = 0.0000e+00 | 1.2765 s
-	003 | E =  -117.641796 | dE = 7.2575e+01 | 0.0172 s
-	004 | E =  -107.190988 | dE = 1.0979e+01 | 0.0201 s
-	005 | E =  -117.376118 | dE = 1.0451e+01 | 0.0203 s
-	006 | E =  -117.085797 | dE = 1.0185e+01 | 0.0160 s
-	007 | E =  -108.013652 | dE = 2.9032e-01 | 0.0149 s
-	008 | E =  -107.421366 | dE = 9.0721e+00 | 0.0143 s
-	009 | E =  -110.457951 | dE = 5.9229e-01 | 0.0151 s
-	010 | E =  -110.419024 | dE = 3.0366e+00 | 0.0176 s
-	011 | E =  -109.548780 | dE = 3.8927e-02 | 0.0159 s
-	012 | E =  -111.008079 | dE = 8.7024e-01 | 0.0159 s
-	013 | E =  -111.118875 | dE = 1.4593e+00 | 0.0163 s
-	014 | E =  -111.130700 | dE = 1.1080e-01 | 0.0162 s
-	015 | E =  -111.130454 | dE = 1.1825e-02 | 0.0210 s
-	016 | E =  -111.130470 | dE = 2.4610e-04 | 0.0258 s
-	017 | E =  -111.130470 | dE = 1.6288e-05 | 0.0188 s
-	018 | E =  -111.130470 | dE = 9.2335e-08 | 0.0158 s
+	002 | E =  -106.382130 | dE = 0.0000e+00 | 0.5628 s
+	003 | E =  -117.367416 | dE = 7.2855e+01 | 0.0187 s
+	004 | E =  -106.912634 | dE = 1.0985e+01 | 0.0157 s
+	005 | E =  -117.101972 | dE = 1.0455e+01 | 0.0153 s
+	006 | E =  -116.811360 | dE = 1.0189e+01 | 0.0157 s
+	007 | E =  -107.735924 | dE = 2.9061e-01 | 0.0177 s
+	008 | E =  -107.142887 | dE = 9.0754e+00 | 0.0206 s
+	009 | E =  -110.184408 | dE = 5.9304e-01 | 0.0153 s
+	010 | E =  -110.142428 | dE = 3.0415e+00 | 0.0180 s
+	011 | E =  -109.287578 | dE = 4.1979e-02 | 0.0226 s
+	012 | E =  -110.733835 | dE = 8.5485e-01 | 0.0187 s
+	013 | E =  -110.843185 | dE = 1.4463e+00 | 0.0231 s
+	014 | E =  -110.854814 | dE = 1.0935e-01 | 0.0183 s
+	015 | E =  -110.854598 | dE = 1.1628e-02 | 0.0193 s
+	016 | E =  -110.854614 | dE = 2.1610e-04 | 0.0159 s
+	017 | E =  -110.854614 | dE = 1.6018e-05 | 0.0182 s
+	018 | E =  -110.854614 | dE = 9.5061e-08 | 0.0175 s
 	Stopping SCF cycle, convergence reached.
 
 Each line corresponds to one update of the density matrix. Internally, PyDFT
@@ -193,8 +193,8 @@ argument when constructing the :class:`pydft.DFT` object:
 which yields the following total electronic energies for the :code:`SVWN5` and
 :code:`PBE` :cite:p:`pbe:1996` exchange-correlation functions::
 
-    SVWN:  -111.13047044798054 Ht
-    PBE:  -111.64036457334683 Ht
+    SVWN:  -110.85461362334834 Ht
+    PBE:  -111.64036457334686 Ht
 
 Tuning the numerical accuracy
 -----------------------------

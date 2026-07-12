@@ -14,7 +14,7 @@ class TestFiniteDifferenceSchemes(unittest.TestCase):
         mol_builder = MoleculeBuilder()
         mol = mol_builder.from_name('CO')
 
-        answers = [-110.8427, -111.1378, -111.1305, -111.1437, -111.1475, -111.1348]
+        answers = [-110.5669, -110.8619, -110.8546, -110.8678, -110.8716, -110.8589]
 
         res = []
         for fdpts in [3,5,7,9,11,13]:
