@@ -1,4 +1,8 @@
 import unittest
+import contextlib
+import io
+from unittest.mock import patch
+
 import numpy as np
 
 from pydft import MoleculeBuilder, DFT
@@ -14,10 +18,26 @@ class TestDFT(unittest.TestCase):
 
         # construct dft object
         dft = DFT(mol, basis='sto3g')
-        res = dft.scf()
+        with self.assertLogs('pydft.dft', level='INFO') as logs:
+            res = dft.scf(verbose=True)
 
         answer = -2.7704595622068138
         np.testing.assert_almost_equal(res['energy'], answer, 4)
+        self.assertTrue(any('| E =' in msg for msg in logs.output))
+
+        pts = np.array([[0.1, 0.0, 0.0], [0.0, 0.2, 0.1]])
+        self.assertEqual(dft.get_density_at_points(pts).shape, (2,))
+        self.assertEqual(dft.get_gradient_at_points(pts).shape, (2, 3))
+
+        with self.assertRaisesRegex(ValueError, 'Nx3'):
+            dft.get_density_at_points(np.array([0.0, 0.0, 0.0]))
+
+        with self.assertRaisesRegex(ValueError, 'Nx3'):
+            dft.get_gradient_at_points(np.array([[0.0, 0.0]]))
+
+        with contextlib.redirect_stdout(io.StringIO()) as stream:
+            dft.print_time_statistics()
+        self.assertIn('Construction times', stream.getvalue())
 
     def test_h2o(self):
         """
@@ -144,6 +164,24 @@ class TestDFT(unittest.TestCase):
 
         answer = -227.14299165089105
         np.testing.assert_almost_equal(res['energy'], answer, 4)
+
+    def test_scalar_grid_settings(self):
+        mol = MoleculeBuilder().from_name('He')
+
+        dft = DFT(mol, basis='sto3g', nshells=8, nangpts=50, lmax=5)
+        res = dft.scf(tol=1e-4)
+
+        self.assertTrue(np.isfinite(res['energy']))
+
+    def test_eigenvalue_failure_reports_scf_iteration(self):
+        mol = MoleculeBuilder().from_name('He')
+        dft = DFT(mol, basis='sto3g', nshells=8, nangpts=50, lmax=5)
+        dft._DFT__setup()
+
+        with patch('pydft.dft.np.linalg.eigh', side_effect=np.linalg.LinAlgError('boom')):
+            with self.assertLogs('pydft.dft', level='ERROR'):
+                with self.assertRaisesRegex(np.linalg.LinAlgError, 'SCF iteration 0'):
+                    dft._DFT__iterate(0)
 
 if __name__ == '__main__':
     unittest.main()

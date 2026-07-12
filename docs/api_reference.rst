@@ -11,8 +11,12 @@ ideas programmatically.
 Public package interface
 ------------------------
 
+The top-level :mod:`pydft` package re-exports the commonly used classes and
+helpers, including :class:`pydft.DFT`, :class:`pydft.MolecularGrid`,
+:class:`pydft.AtomicGrid`, ``pydft.Molecule``, and
+``pydft.MoleculeBuilder``.
+
 .. automodule:: pydft
-   :members:
 
 SCF driver
 ----------

@@ -143,8 +143,19 @@ To visualize the overlap matrix :math:`\mathbf{S}` and the Fock matrix
 Showing the electronic steps
 ----------------------------
 
-To get verbose output, i.e. information per electronic step, one can specify
-:code:`verbose = True`.
+To get verbose output, i.e. information per electronic step, configure
+``logging`` and specify :code:`verbose = True`.
+
+.. note::
+
+   PyDFT uses Python's standard ``logging`` module for these progress messages
+   instead of printing directly. This means that :code:`verbose = True` tells
+   PyDFT to create informational log messages, while
+   :code:`logging.basicConfig(...)` tells Python where and how to show them.
+   Without the ``logging`` configuration, the calculation still runs normally,
+   but the progress messages remain hidden. This makes it possible to use PyDFT
+   quietly in scripts, tests, and notebooks, or to send messages to the terminal
+   when interactive feedback is useful.
 
 .. literalinclude:: scripts/00-verbose.py
     :language: python

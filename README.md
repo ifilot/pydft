@@ -1,6 +1,7 @@
 # PyDFT
 
 [![build](https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml/badge.svg)](https://github.com/ifilot/pydft/actions/workflows/build_pypi.yml)
+[![codecov](https://codecov.io/gh/ifilot/pydft/branch/master/graph/badge.svg)](https://codecov.io/gh/ifilot/pydft)
 [![PyPI](https://img.shields.io/pypi/v/pydft?color=green)](https://pypi.org/project/pydft/)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 
@@ -10,14 +11,28 @@
 
 ## Purpose
 
-PyDFT is a pure-Python package for performing localized-orbital DFT calculations
-using Gaussian Type Orbitals. PyDFT currently supports LDA and PBE
-exchange-correlation functionals. The purpose of PyDFT is mainly to serve as an
-educational tool to explain the inner workings of a DFT calculation. This
-program is not intended for professional calculations. It is not particularly
-fast nor offers a lot of features that more mature open-source of commercial
-packages offer. It **does** offer a unique insight into a working code and a
-considerable effort was made in documenting everything.
+PyDFT is a pure-Python package for performing localized-orbital Density
+Functional Theory (DFT) calculations using Gaussian Type Orbitals. It implements
+restricted Kohn-Sham DFT for closed-shell molecules and currently supports the
+LDA and PBE exchange-correlation functionals.
+
+The goal of PyDFT is not to be the fastest DFT code, but to be the most
+**transparent** one. It is designed first and foremost as an educational tool
+that reveals how a DFT calculation is actually assembled, from numerical grids
+and electron densities to potentials, matrix elements, and the self-consistent
+field procedure. Every intermediate quantity is exposed to the user and can be
+inspected, plotted, or modified, and considerable effort was put into
+documenting the code. PyDFT is not intended for professional calculations and
+does not offer the speed or breadth of features of mature open-source or
+commercial packages; what it offers instead is a clear, modifiable view into a
+working DFT code.
+
+The figure below gives a high-level overview of a complete PyDFT calculation:
+from molecular input and dependencies, through construction of the Becke grid
+and one-electron matrices, to the Kohn-Sham SCF iteration and the wide range of
+quantities exposed for inspection.
+
+![Overview of the PyDFT workflow](img/pydft-overview.png)
 
 > [!TIP]  
 > Interested in other **educational** quantum chemical codes? Have a look at the
@@ -32,6 +47,9 @@ considerable effort was made in documenting everything.
 >   Density Functional Theory Calculations.
 
 ## Features
+
+The sections below highlight a few of the capabilities that make PyDFT useful
+as a teaching and exploration tool.
 
 ### Numerical integration using Becke grids
 
@@ -56,13 +74,36 @@ and can be readily visualized using specific matrix visualization routines.
 
 ![Matrices](img/matrices.png)
 
+### Tunable numerical settings
+
+Numerical choices that are usually hidden behind defaults in production codes,
+such as the radial and angular resolution of the grid, the spherical-harmonic
+expansion used for the Hartree potential, the exchange-correlation functional,
+and the SCF convergence criteria, are all exposed directly. This makes it
+straightforward to study how each setting affects accuracy, stability, and
+computational cost.
+
 ## Installation
 
-This code depends on a few other packages. To install this code and its
-dependencies, run the following one-liner
+PyDFT supports Python 3.10 and newer.
+
+To install PyDFT and its core runtime dependencies, run
 
 ```bash
-pip install pydft pyqint pylebedev pytessel
+pip install pydft
+```
+
+The plotting and example scripts use optional visualization dependencies:
+
+```bash
+pip install "pydft[plot]"
+```
+
+To install the dependencies used by the example scripts, including isosurface
+support, run
+
+```bash
+pip install "pydft[examples]"
 ```
 
 ## Usage
@@ -81,7 +122,7 @@ from pydft import MoleculeBuilder, DFT
 
 CO = MoleculeBuilder().get_molecule("CO")
 dft = DFT(CO, basis='sto3g')
-res = dft.scf(1e-4, verbose=True)
+res = dft.scf(1e-4)
 print("Total electronic energy: %f Ht" % res['energy'])
 ```
 

@@ -1,8 +1,3 @@
-"""Package version lookup with a local fallback for editable checkouts."""
+"""Package version exposed by :mod:`pydft`."""
 
-from importlib.metadata import version, PackageNotFoundError
-
-try:
-    __version__ = version("pydft")
-except PackageNotFoundError:
-    __version__ = "0.0.0"  # optional fallback
+__version__ = "1.1.0"

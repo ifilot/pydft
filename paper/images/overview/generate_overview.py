@@ -44,7 +44,7 @@ class Palette:
     ink: str = "#1f2933"
     muted: str = "#617085"
     line: str = "#d7dee9"
-    bg: str = "#fbfcfe"
+    bg: str = "#ffffff"
 
 
 PAL = Palette()
