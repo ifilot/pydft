@@ -59,6 +59,9 @@ include = ["pydft*"]
 branch = true
 source = ["pydft"]
 
+[tool.coverage.paths]
+source = ["pydft", "*/site-packages/pydft"]
+
 [tool.coverage.report]
 show_missing = true
 skip_covered = true

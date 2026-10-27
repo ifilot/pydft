@@ -27,14 +27,27 @@ jobs:
           pip install virtualenv
           virtualenv venv
           . venv/bin/activate
-          pip install build
-      - name: Build WHL
+          pip install build twine
+      - name: Build release distributions
         run: |
           . venv/bin/activate
+          python - <<'PYCODE'
+          import os
+          import runpy
+          import tomllib
+          from pathlib import Path
+
+          version = tomllib.loads(Path("pyproject.toml").read_text())["project"]["version"]
+          assert runpy.run_path("pydft/_version.py")["__version__"] == version
+          ref = os.environ["GITHUB_REF"]
+          if ref.startswith("refs/tags/v"):
+              assert ref.removeprefix("refs/tags/v") == version, "Tag/version mismatch"
+          PYCODE
           python -m build
+          python -m twine check dist/*
       - uses: actions/upload-artifact@v4
         with:
-          path: ./dist/*.whl
+          path: ./dist/*
           name: whl
   
   test-pip:
@@ -69,7 +82,25 @@ jobs:
       - name: Perform unit tests
         run: |
           . venv/bin/activate
-          python -m coverage run -m pytest tests/*.py --verbose
+          test_dir=$(mktemp -d)
+          cp -r tests "$test_dir/tests"
+          (
+            cd "$test_dir"
+            python - <<'PYCODE'
+          from importlib.metadata import version
+          from pathlib import Path
+          import sys
+          import pydft
+
+          assert Path(pydft.__file__).resolve().is_relative_to(Path(sys.prefix).resolve())
+          assert pydft.__version__ == version("pydft")
+          PYCODE
+            python -m coverage run --parallel-mode \
+              --rcfile "$GITHUB_WORKSPACE/pyproject.toml" \
+              --data-file "$GITHUB_WORKSPACE/.coverage" \
+              -m pytest tests --verbose --import-mode=importlib
+          )
+          python -m coverage combine
           python -m coverage report
           python -m coverage xml
       - name: Upload coverage report
