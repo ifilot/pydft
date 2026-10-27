@@ -74,8 +74,8 @@ class MolecularGrid:
             Number of grid points used in the finite-difference scheme. The
             default is 7.
         functional : str, optional
-            Exchange-correlation functional used for grid-based quantities. The
-            default is ``'svwn5'``.
+            Exchange-correlation functional: ``'svwn3'``, ``'svwn5'``
+            (also ``'svwn'``), or ``'pbe'``. The default is ``'svwn5'``.
         interpolation_method : str, optional
             Interpolation method used for radial quantities. The default is
             ``'CubicStencil'``.

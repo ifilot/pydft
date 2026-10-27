@@ -19,12 +19,21 @@ class Functionals:
 
         Parameters
         ----------
-        functional : {'svwn5', 'pbe'}, optional
+        functional : {'svwn3', 'svwn5', 'svwn', 'pbe'}, optional
             ``'svwn5'`` combines Slater exchange with VWN5 correlation and is an
-            LDA functional. ``'pbe'`` selects the spin-unpolarized PBE GGA
+            LDA functional. ``'svwn3'`` uses the VWN-RPA parameter set
+            (the common quantum-chemistry VWN3 convention) for this
+            spin-unpolarized implementation. ``'svwn'`` aliases ``'svwn5'``.
+            ``'pbe'`` selects the spin-unpolarized PBE GGA
             exchange-correlation functional.
         """
+        if functional == 'svwn':
+            functional = 'svwn5'
+
         functionals = {
+            'svwn3': [self.__slater, self.__vwn3,
+                      self.__slater_deriv, self.__vwn3_deriv,
+                      None, None, False],
             'svwn5': [self.__slater, self.__vwn5,
                       self.__slater_deriv, self.__vwn5_deriv,
                       None, None, False],
@@ -139,14 +148,17 @@ class Functionals:
         """
         return -(3 / np.pi)**(1/3) / 4 / dens**(2/3)
         
+    def __vwn3(self, dens):
+        return self.__vwn(dens, -0.409286, 13.0720, 42.7198)
+
     def __vwn5(self, dens):
+        return self.__vwn(dens, -0.10498, 3.72744, 12.9352)
+
+    def __vwn(self, dens, x0, b, c):
         # Note that equation E.27 is incorrect in the book of Parr and Yang
         # but is correct in the original paper of Vosko, Wilk and Nusair
         # https://cdnsciencepub.com/doi/pdf/10.1139/p80-159
         A = 0.0621814
-        x0 = -0.409286
-        b = 13.0720
-        c = 42.7198
         
         rs = (3. / 4. / np.pi / dens)**(1./3.)
         
@@ -158,14 +170,15 @@ class Functionals:
         
         return A/2 * (np.log(x**2/X) + 2*b/Q * atan - b*x0/X0 * (np.log((x-x0)**2 / X) + 2 * (b + 2*x0) / Q * atan))
 
+    def __vwn3_deriv(self, dens):
+        return self.__vwn_deriv(dens, -0.409286, 13.0720, 42.7198)
+
     def __vwn5_deriv(self, dens):
-        """
-        Derivative of the VWN5 correlation functional towards the density
-        """
+        return self.__vwn_deriv(dens, -0.10498, 3.72744, 12.9352)
+
+    def __vwn_deriv(self, dens, x0, b, c):
+        """Derivative of the VWN energy per particle towards density."""
         A = 0.0621814
-        x0 = -0.409286
-        b = 13.0720
-        c = 42.7198
         X0 = x0**2 + b * x0 + c
         Q = (4 * c - b**2)**(1/2)
 

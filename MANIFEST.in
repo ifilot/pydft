@@ -1,0 +1,2 @@
+include tests/generate_xc_reference.py
+recursive-include tests/data *.json

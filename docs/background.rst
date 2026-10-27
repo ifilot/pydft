@@ -192,9 +192,12 @@ energy cannot be computed exactly and must be approximated.
 :program:`PyDFT` currently supports two widely-used approximations:
 
 * **LDA** (Local Density Approximation): combines Slater exchange
-  :cite:p:`slater:1951` with the SVWN5 correlation functional
-  :cite:p:`vosko:1980`. The energy density at each point depends only on the
-  local electron density :math:`\rho` at that point. This is the simplest
+  :cite:p:`slater:1951` with VWN correlation
+  :cite:p:`vosko:1980`. Select ``svwn5`` (the default, also available as
+  ``svwn``) or ``svwn3`` (the VWN-RPA parameter set, following the common
+  quantum-chemistry convention for spin-unpolarized calculations). The energy
+  density at each point depends only on the local electron density
+  :math:`\rho` at that point. This is the simplest
   meaningful approximation and a good starting point for learning DFT.
 * **PBE** (Perdew-Burke-Ernzerhof): a Generalised Gradient Approximation (GGA)
   functional :cite:p:`pbe:1996`. It improves on LDA by also taking into account
