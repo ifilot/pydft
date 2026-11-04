@@ -17,7 +17,7 @@ class TestXC(unittest.TestCase):
         dft = DFT(mol, basis='sto3g', functional='svwn5')
         res = dft.scf()
 
-        answer = -2.7704595622068138
+        answer = -2.770461011973549
         np.testing.assert_almost_equal(res['energy'], answer, 4)
 
     def test_pbe(self):
@@ -31,7 +31,7 @@ class TestXC(unittest.TestCase):
         dft = DFT(mol, basis='sto3g', functional='pbe')
         res = dft.scf()
 
-        answer = -2.8287483384734955
+        answer = -2.8287483506494366
         np.testing.assert_almost_equal(res['energy'], answer, 4)
 
     def test_invalid_functional_name_is_rejected(self):
