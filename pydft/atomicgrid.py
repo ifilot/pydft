@@ -3,6 +3,7 @@
 
 import numpy as np
 from scipy.interpolate import CubicSpline
+from scipy.linalg import lu_factor, lu_solve
 from .angulargrid import AngularGrid
 from .spherical_harmonics import SphericalHarmonicsCache
 import math
@@ -54,6 +55,7 @@ class AtomicGrid:
         self.__nshells = nshells        # number of radial shells
         self.__nangpts = nangpts        # number of angular points
         self.__fdpts = fdpts            # number of grid points used in finite difference scheme
+        self.__hartree_solvers = None   # LU-factorized finite difference matrices, see __build_hartree_solvers
         
         # perform some parameter checking
         if self.__fdpts < 3:
@@ -399,38 +401,68 @@ class AtomicGrid:
         self.__rho_lm = self.perform_spherical_harmonic_expansion(self.__edens)
     
     def __calculate_hartree_potential_coefficients(self):
-        """
+        r"""
         Calculate the Hartree potential using the finite difference approximation
+
+        For every pair :math:`(l,m)`, the radial Poisson equation is
+        discretized into a linear system :math:`\mathbf{M}_{l}
+        \mathbf{u}_{lm} = \mathbf{b}_{lm}`. The matrix :math:`\mathbf{M}_{l}`
+        only depends on the radial grid and on :math:`l`, but neither on
+        :math:`m` nor on the electron density. These matrices are therefore
+        constructed and LU-factorized only once (see
+        :meth:`__build_hartree_solvers`), such that every subsequent call only
+        needs to build the right-hand sides :math:`\mathbf{b}_{lm}` and can
+        solve for all values of :math:`m` belonging to the same :math:`l` at
+        once.
+        """
+        # the finite difference matrices are built upon first use
+        if self.__hartree_solvers is None:
+            self.__build_hartree_solvers()
+
+        self.__ulm = np.zeros_like(self.__rho_lm)
+        N = len(self.__rr) + 2  # radial grid points plus the two boundary points
+
+        lmctr = 0 # index of the first (l,m) channel belonging to the current l
+        for l in range(0, self.__lmax+1):
+            nm = 2 * l + 1  # number of m values for this l
+
+            # build the right-hand sides for all m values of this l; the
+            # first and the last point hold the boundary conditions at
+            # r -> infinity and at r = 0, respectively
+            b = np.zeros((N, nm))
+            b[1:-1,:] = -4.0 * np.pi * self.__rr[:,np.newaxis] * self.__rho_lm[:, lmctr:lmctr+nm]
+
+            # at r -> infinity, only the spherically symmetric (l=0) channel
+            # feels the total electronic charge
+            if l == 0:
+                b[0,0] = np.sqrt(4. * np.pi) * self.count_electrons()
+
+            # solve for all m values at once and drop the two boundary points
+            self.__ulm[:, lmctr:lmctr+nm] = lu_solve(self.__hartree_solvers[l], b)[1:-1]
+
+            # move to the first (l,m) channel of the next l
+            lmctr += nm
+
+    def __build_hartree_solvers(self):
+        """
+        Construct and LU-factorize the finite difference matrices that are
+        used to solve the radial Poisson equation, one for every value of l
+
+        These matrices only depend on the radial grid, which is fixed for an
+        atomic grid, such that this function needs to be called only once.
         """
         # construct base matrix
         Mbase = self.__build_finite_difference_matrix(self.__rr, 0.5 * self.__rm)
-        self.__ulm = np.zeros_like(self.__rho_lm)
 
-        lmctr = 0 # indexing counter
+        # the radial grid points correspond to the interior points of the
+        # matrix; the first and the last point are the boundary points
+        interior = np.arange(1, len(self.__rr) + 1)
+
+        self.__hartree_solvers = []
         for l in range(0, self.__lmax+1):
-            for m in range(-l, l+1):
-                M = Mbase.copy() # create copy of base matrix
-                N = M.shape[0]   # grid size + 2
-                b = np.zeros(N)
-                
-                for i in range(0, N):
-                    # set first element for first lm value
-                    if i == 0:
-                        if l == 0:
-                            b[i] = np.sqrt(4. * np.pi) * self.count_electrons()
-                        continue
-                    
-                    # skip last element
-                    if i == N-1:
-                        continue
-                
-                    M[i,i] -= l * (l+1) / self.__rr[i-1]**2
-                    b[i] = -4.0 * np.pi * self.__rr[i-1] * self.__rho_lm[i-1, lmctr]
-                
-                self.__ulm[:,lmctr] = np.linalg.solve(M,b)[1:-1]
-
-                # increment lm counter                    
-                lmctr += 1
+            M = Mbase.copy() # create copy of base matrix
+            M[interior, interior] -= l * (l+1) / self.__rr**2
+            self.__hartree_solvers.append(lu_factor(M))
     
     def calculate_nuclear_attraction(self):
         """

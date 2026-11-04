@@ -5,6 +5,15 @@ from pydft import AtomicGrid
 from pydft.atomicgrid import job_build_atomic_grid
 
 
+def get_fe_3dyy_cgf():
+    """Return the Fe STO-3G 3d_yy function, independent of shell ordering."""
+    mol = Molecule('Fe')
+    mol.add_atom('Fe', 0.0, 0.0, 0.0)
+    cgfs, _ = mol.build_basis('sto3g')
+    return next(cgf for cgf in cgfs
+                if (cgf.gtos[0].l, cgf.gtos[0].m, cgf.gtos[0].n) == (0, 2, 0))
+
+
 class TestAtomicGrid(unittest.TestCase):
 
     def test_hartee_potential(self):
@@ -13,11 +22,8 @@ class TestAtomicGrid(unittest.TestCase):
         self-repulsion using a regular grid
         """
         # grab a non-trivial sampling AO
-        mol = Molecule('Fe')
-        mol.add_atom('Fe', 0.0, 0.0, 0.0)
-        cgfs, nuclei = mol.build_basis('sto3g')
         integrator = PyQInt()
-        ao = cgfs[-7]
+        ao = get_fe_3dyy_cgf()
 
         # build an atomic grid
         ag = AtomicGrid(('H', [0,0,0]))
@@ -40,11 +46,8 @@ class TestAtomicGrid(unittest.TestCase):
         self-repulsion using a somewhat coarser grid
         """
         # grab a non-trivial sampling AO
-        mol = Molecule('Fe')
-        mol.add_atom('Fe', 0.0, 0.0, 0.0)
-        cgfs, nuclei = mol.build_basis('sto3g')
         integrator = PyQInt()
-        ao = cgfs[-7]
+        ao = get_fe_3dyy_cgf()
 
         # build an atomic grid
         ag = AtomicGrid(('H', [0,0,0]), nshells=20, nangpts=50, lmax=5)

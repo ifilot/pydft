@@ -1145,20 +1145,17 @@ class MolecularGrid:
         """
         # calculate the amplitudes of the basis functions and store these
         # per atomic grid, per basis function and per points in the atomic
-        # grid
+        # grid; PyQInt evaluates all basis functions in a single call, which
+        # is much faster than evaluating the basis functions one by one
         # dimensions: [(atoms) x (basis functions) x (points per atom)]
         st = time.perf_counter()
-        self.__amplitudes = []
-        for i in range(len(self.__atoms)):
-            self.__amplitudes.append(np.empty( (len(self.__basis), len(self.__gridpoints_per_atom[i])) ))
-            for j,cgf in enumerate(self.__basis):
-                self.__amplitudes[i][j,:] = self.integrator.plot_wavefunction(self.__gridpoints_per_atom[i], [1], [cgf])
+        self.__amplitudes = [self.integrator.plot_basis_functions(gridpoints, self.__basis)
+                             for gridpoints in self.__gridpoints_per_atom]
 
         # reassemble the amplitudes per atomic grid into one for the complete
         # molecular grid
-        self.__fullgrid_amplitudes = np.empty((len(self.__basis), np.sum([len(mw) for mw in self.__mweights])))
-        for i,cgf in enumerate(self.__basis):
-            self.__fullgrid_amplitudes[i,:] = np.concatenate([self.__amplitudes[a][i] for a in range(len(self.__atoms))])
+        # dimensions: [(basis functions) x (molecular grid points)]
+        self.__fullgrid_amplitudes = np.concatenate(self.__amplitudes, axis=1)
         self.construct_times['basis_function_amplitudes'] = time.perf_counter() - st
 
     def __build_gradients(self):
@@ -1170,17 +1167,15 @@ class MolecularGrid:
         amplitudes built by :meth:`__build_amplitudes`, but store the Cartesian
         gradient components for each basis function and grid point.
         """
-        self.__ampgrads = []
-        for i in range(len(self.__atoms)):
-            self.__ampgrads.append(np.empty( (len(self.__basis), len(self.__gridpoints_per_atom[i]), 3) ))
-            for j,cgf in enumerate(self.__basis):
-                self.__ampgrads[i][j,:] = self.integrator.plot_gradient(self.__gridpoints_per_atom[i], [1], [cgf])
+        # calculate the gradients of all basis functions per atomic grid
+        # dimensions: [(atoms) x (basis functions) x (points per atom) x 3]
+        self.__ampgrads = [self.integrator.plot_basis_function_gradients(gridpoints, self.__basis)
+                           for gridpoints in self.__gridpoints_per_atom]
 
-        self.__fullgrid_ampgrads = np.empty((len(self.__basis),
-                                             np.sum([len(mw) for mw in self.__mweights]),
-                                             3))
-        for i,cgf in enumerate(self.__basis):
-            self.__fullgrid_ampgrads[i,:,:] = np.concatenate([self.__ampgrads[a][i] for a in range(len(self.__atoms))])
+        # reassemble the gradients per atomic grid into one for the complete
+        # molecular grid
+        # dimensions: [(basis functions) x (molecular grid points) x 3]
+        self.__fullgrid_ampgrads = np.concatenate(self.__ampgrads, axis=1)
 
     def __vij(self, mu, chi):
         """

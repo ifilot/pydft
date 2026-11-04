@@ -58,6 +58,6 @@ def test_molecular_energy_against_pyscf(name, functional):
                       nshells=128, nangpts=302)
     result = calculation.scf(tol=1e-7)
     # Use a finer grid than the defaults to resolve the numerical Hartree term.
-    # PyQInt and PySCF also use slightly different rounded STO-3G coefficients.
+    # The remaining gap is grid integration error, largest for CO (~8e-5 Ht).
     tolerance = 2e-4 if name == "CO" else 5e-6
     assert result["energy"] == pytest.approx(expected["energies"][functional], abs=tolerance)

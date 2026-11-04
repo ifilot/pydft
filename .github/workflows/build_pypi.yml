@@ -13,6 +13,12 @@ on:
     types:
       - published
 
+# When new commits are pushed to a pull request, cancel the runs of the
+# previous commits. Runs of master, develop and tags are never cancelled.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
 
   build-pip:
@@ -22,12 +28,13 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      # uv is used instead of pip, because it installs packages much faster
       - name: Build dependencies
         run: |
-          pip install virtualenv
-          virtualenv venv
+          pip install uv
+          uv venv --python "$(command -v python)" venv
           . venv/bin/activate
-          pip install build twine
+          uv pip install build twine
       - name: Build release distributions
         run: |
           . venv/bin/activate
@@ -43,7 +50,7 @@ jobs:
           if ref.startswith("refs/tags/v"):
               assert ref.removeprefix("refs/tags/v") == version, "Tag/version mismatch"
           PYCODE
-          python -m build
+          python -m build --installer uv
           python -m twine check dist/*
       - uses: actions/upload-artifact@v4
         with:
@@ -75,10 +82,10 @@ jobs:
           path: dist
       - name: Install PyDFT
         run: |
-          pip install virtualenv
-          virtualenv venv
+          pip install uv
+          uv venv --python "$(command -v python)" venv
           . venv/bin/activate
-          pip install build "coverage[toml]" pytest dist/*.whl
+          uv pip install "coverage[toml]" pytest dist/*.whl
       - name: Perform unit tests
         run: |
           . venv/bin/activate

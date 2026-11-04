@@ -20,7 +20,7 @@ the :meth:`pydft.DFT.scf` routine to start the self-consistent field calculation
 Performing this calculation shows that the total electronic energy for this
 system corresponds to::
 
-    Total electronic energy:      -110.854614 Ht
+    Total electronic energy:      -110.854656 Ht
 
 Result dictionary
 -----------------
@@ -112,17 +112,17 @@ electron-electron repulsion and exchange-correlation energy.
 
 The above script yields the following output::
 
-  Total electronic energy:      -110.854614 Ht
+  Total electronic energy:      -110.854656 Ht
 
-  Kinetic energy:                110.215413 Ht
-  Nuclear attraction:           -304.926853 Ht
-  Electron-electron repulsion:    75.610445 Ht
-  Exchange energy:               -12.054947 Ht
+  Kinetic energy:                110.215430 Ht
+  Nuclear attraction:           -304.926882 Ht
+  Electron-electron repulsion:    75.610408 Ht
+  Exchange energy:               -12.054941 Ht
   Correlation energy:             -0.956764 Ht
-  Exchange-correlation energy:   -13.011711 Ht
+  Exchange-correlation energy:   -13.011705 Ht
   Nucleus-nucleus repulsion:      21.258092 Ht
 
-  Sum:  -110.854614 Ht
+  Sum:  -110.854656 Ht
 
 Self-consistent field matrices
 ------------------------------
@@ -164,24 +164,24 @@ To get verbose output, i.e. information per electronic step, configure
 Executing the script above yields output like the following. The timings depend
 on the machine and runtime environment::
 
-	001 | E =  -179.237419 | dE = 0.0000e+00 | 0.0010 s
-	002 | E =  -106.382130 | dE = 0.0000e+00 | 0.5628 s
-	003 | E =  -117.367416 | dE = 7.2855e+01 | 0.0187 s
-	004 | E =  -106.912634 | dE = 1.0985e+01 | 0.0157 s
-	005 | E =  -117.101972 | dE = 1.0455e+01 | 0.0153 s
-	006 | E =  -116.811360 | dE = 1.0189e+01 | 0.0157 s
-	007 | E =  -107.735924 | dE = 2.9061e-01 | 0.0177 s
-	008 | E =  -107.142887 | dE = 9.0754e+00 | 0.0206 s
-	009 | E =  -110.184408 | dE = 5.9304e-01 | 0.0153 s
-	010 | E =  -110.142428 | dE = 3.0415e+00 | 0.0180 s
-	011 | E =  -109.287578 | dE = 4.1979e-02 | 0.0226 s
-	012 | E =  -110.733835 | dE = 8.5485e-01 | 0.0187 s
-	013 | E =  -110.843185 | dE = 1.4463e+00 | 0.0231 s
-	014 | E =  -110.854814 | dE = 1.0935e-01 | 0.0183 s
-	015 | E =  -110.854598 | dE = 1.1628e-02 | 0.0193 s
-	016 | E =  -110.854614 | dE = 2.1610e-04 | 0.0159 s
-	017 | E =  -110.854614 | dE = 1.6018e-05 | 0.0182 s
-	018 | E =  -110.854614 | dE = 9.5061e-08 | 0.0175 s
+	001 | E =  -179.237383 | dE = 0.0000e+00 | 0.0012 s
+	002 | E =  -106.382172 | dE = 7.2855e+01 | 0.4163 s
+	003 | E =  -117.367368 | dE = 1.0985e+01 | 0.0169 s
+	004 | E =  -106.912709 | dE = 1.0455e+01 | 0.0129 s
+	005 | E =  -117.101913 | dE = 1.0189e+01 | 0.0124 s
+	006 | E =  -116.810820 | dE = 2.9109e-01 | 0.0131 s
+	007 | E =  -107.736372 | dE = 9.0744e+00 | 0.0145 s
+	008 | E =  -107.143365 | dE = 5.9301e-01 | 0.0117 s
+	009 | E =  -110.185111 | dE = 3.0417e+00 | 0.0123 s
+	010 | E =  -110.143729 | dE = 4.1382e-02 | 0.0146 s
+	011 | E =  -109.287706 | dE = 8.5602e-01 | 0.0143 s
+	012 | E =  -110.734110 | dE = 1.4464e+00 | 0.0117 s
+	013 | E =  -110.843239 | dE = 1.0913e-01 | 0.0120 s
+	014 | E =  -110.854859 | dE = 1.1620e-02 | 0.0116 s
+	015 | E =  -110.854640 | dE = 2.1924e-04 | 0.0131 s
+	016 | E =  -110.854656 | dE = 1.5937e-05 | 0.0118 s
+	017 | E =  -110.854656 | dE = 9.4844e-08 | 0.0119 s
+	018 | E =  -110.854656 | dE = 0.0000e+00 | 0.0114 s
 	Stopping SCF cycle, convergence reached.
 
 Each line corresponds to one update of the density matrix. Internally, PyDFT
@@ -204,8 +204,8 @@ argument when constructing the :class:`pydft.DFT` object:
 which yields the following total electronic energies for the :code:`SVWN5` and
 :code:`PBE` :cite:p:`pbe:1996` exchange-correlation functions::
 
-    SVWN:  -110.85461362334834 Ht
-    PBE:  -111.64036457334686 Ht
+    SVWN:  -110.8546559845606 Ht
+    PBE:  -111.64040667165378 Ht
 
 Tuning the numerical accuracy
 -----------------------------
@@ -255,7 +255,7 @@ calculation with a moderately accurate grid can be set up as
 
 which shows the following output::
 
-    Total electronic energy:      -111.142418 Ht
+    Total electronic energy:      -110.866603 Ht
 
 If higher accuracy is required, the number of radial shells can be increased,
 for example to 64, and the number of angular points can be increased by
