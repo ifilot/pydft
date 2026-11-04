@@ -24,6 +24,13 @@ class TestDFT(unittest.TestCase):
         answer = -2.7704595622068138
         np.testing.assert_almost_equal(res['energy'], answer, 4)
         self.assertTrue(any('| E =' in msg for msg in logs.output))
+        iteration_logs = [msg for msg in logs.output if '| E =' in msg]
+        energies = res['energies']
+        for index, message in enumerate(iteration_logs):
+            logged_delta = float(message.split('dE = ')[1].split(' |')[0])
+            expected_delta = 0.0 if index == 0 else abs(energies[index] - energies[index - 1])
+            self.assertAlmostEqual(logged_delta, expected_delta,
+                                   delta=max(1e-12, expected_delta * 5e-5))
 
         pts = np.array([[0.1, 0.0, 0.0], [0.0, 0.2, 0.1]])
         self.assertEqual(dft.get_density_at_points(pts).shape, (2,))

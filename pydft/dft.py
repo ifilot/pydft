@@ -57,7 +57,8 @@ class DFT():
             Gaussian functions. The default is ``'sto3g'``.
         functional : str, optional
             Exchange-correlation functional. Valid options are
-            :code:`svwn5` and :code:`pbe`. The default is ``'svwn5'``.
+            :code:`svwn3`, :code:`svwn5` (also :code:`svwn`), and
+            :code:`pbe`. The default is ``'svwn5'``.
         nshells : Mapping[str, int], optional
             Number of radial integration shells per atomic species. If not
             provided, default values are used based on the atomic row.
@@ -297,6 +298,9 @@ class DFT():
             itertime = stop - start
             self.__time_stats['iterations'].append(itertime)
 
+            if niter > 0:
+                ediff = np.abs(energy - self.__energies[-2])
+
             if verbose:
                 logger.info(
                     "%03i | E = %12.6f | dE = %5.4e | %0.4f s",
@@ -306,8 +310,6 @@ class DFT():
                     itertime,
                 )
             
-            if niter > 0:
-                ediff = np.abs(energy - self.__energies[-2])
             if niter > 2:
                 if ediff < tol:
                     # terminate giis self-convergence and continue with mixing

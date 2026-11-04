@@ -30,7 +30,7 @@ classifiers = [
 dependencies = [
     "scipy>=1.15",
     "numpy",
-    "pyqint>=1.2",
+    "pyqint>=1.5.0",
     "pylebedev",
     "numba"
 ]
@@ -58,6 +58,9 @@ include = ["pydft*"]
 [tool.coverage.run]
 branch = true
 source = ["pydft"]
+
+[tool.coverage.paths]
+source = ["pydft", "*/site-packages/pydft"]
 
 [tool.coverage.report]
 show_missing = true
