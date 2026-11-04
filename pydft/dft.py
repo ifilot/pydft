@@ -604,17 +604,22 @@ class DFT():
         return J
     
     def __calculate_P(self):
-        """
+        r"""
         Calculate density matrix from current coefficient matrix
+
+        .. math::
+
+            P_{ij} = 2 \sum_{k}^{\text{occ}} C_{ik} C_{jk}
+
+        wherein the sum runs over the doubly occupied molecular orbitals. In
+        matrix notation, this reads :math:`\mathbf{P} = 2
+        \mathbf{C}_{\text{occ}} \mathbf{C}_{\text{occ}}^{T}`, which is
+        evaluated below as a single matrix product.
         """
-        N = len(self.__cgfs)
-        P = np.zeros_like(self.__S)
-        for i in range(0,N):
-            for j in range(0,N):
-                for k in range(0,int(self.__nelec//2)):
-                    P[i,j] += 2.0 * self.__C[i,k] * self.__C[j,k]
-                    
-        return P
+        nocc = int(self.__nelec // 2)   # number of doubly occupied orbitals
+        Cocc = self.__C[:, :nocc]       # coefficients of the occupied orbitals
+
+        return 2.0 * Cocc @ Cocc.T
     
     def __calculate_XC(self):
         """
